@@ -1,0 +1,2445 @@
+// This file contains all basic SQL calls to oracle database OBSPROD.
+// Constraints for IDs are appended during runtime as needed.
+
+
+// The order in which fields are listed in these SQL queries matter
+// If a change is made to any of these following SQL queries, a respective change must
+// be made to the Build/Construct functions. 
+export function AllNewTripsSQL(strDateBegin: string, strDateEnd: string){
+  return `
+    SELECT TRIPS.TRIP_ID 
+    FROM OBSPROD.TRIPS 
+    WHERE 
+      (
+        (TRIPS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        TRIPS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR
+    
+      (TRIPS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+    `;
+}
+
+export function TripTableSQL(strDateBegin: string, strDateEnd: string){
+  return `SELECT 
+
+  TRIP_ID,
+  VESSEL_ID,
+  USER_ID,
+  PROGRAM_ID,
+  DEBRIEFING_ID,
+  TRIP_STATUS,
+  DEPARTURE_PORT_ID,
+  DEPARTURE_DATE,
+  RETURN_PORT_ID,
+  RETURN_DATE,
+  LOGBOOK_NUMBER,
+  NOTES,
+  DATA_QUALITY,
+  CREATED_BY,
+  CREATED_DATE,
+  MODIFIED_BY,
+  RECORD_LAST_EDITED_ON_DATE,
+  OTC_KP,
+  TOTAL_HOOKS_KP,
+  OBSERVER_LOGBOOK,
+  EVALUATION_ID,
+  PARTIAL_TRIP,
+  SKIPPER_ID,
+  FISHERY,
+  CREW_SIZE,
+  PERMIT_NUMBER,
+  LICENSE_NUMBER,
+  LOGBOOK_TYPE,
+  FIRST_RECEIVER,
+  EXPORT,
+  EXTERNAL_TRIP_ID,
+  DO_EXPAND,
+  RUN_TER,
+  DATA_SOURCE,
+  FISH_PROCESSED,
+  NO_FISHING_ACTIVITY,
+  INTENDED_GEAR_TYPE,
+  TOTAL_FISHING_DAYS, 
+  MODIFIED_DATE,
+  RECORD_LAST_EDITED_BY_USER,
+  RECORD_COMPUTER_LOAD_ON_DATE
+  
+  FROM OBSPROD.TRIPS
+  
+  WHERE 
+      (
+        (TRIPS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        TRIPS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR
+    
+      (TRIPS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      (
+        (TRIPS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        TRIPS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      ) OR
+      (TRIPS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+    
+      `;
+}
+
+export function NewLookups(strDateBegin: string, strDateEnd: string, strLookupType: string){
+  return `
+    SELECT 
+    LOOKUP_ID,
+    LOOKUP_TYPE,
+    LOOKUP_VALUE,
+    DESCRIPTION,
+    CREATED_BY,
+    CREATED_DATE,
+    MODIFIED_BY,
+    RECORD_LAST_EDITED_ON_DATE,
+    PROGRAM_ID,
+    ACTIVE,
+    SORT_ORDER,
+    RECORD_COMPUTER_LOAD_ON_DATE,
+    MODIFIED_DATE,
+    RECORD_LAST_EDITED_BY_USER
+    FROM OBSPROD.LOOKUPS
+    WHERE 
+      LOOKUPS.LOOKUP_TYPE = '` + strLookupType + `' AND
+      (
+        (
+          (LOOKUPS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+          LOOKUPS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+        ) OR
+      
+        (LOOKUPS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+      )
+    `;
+}
+
+export function AllModifiedTripsSQL(strDateBegin: string, strDateEnd: string){
+  return `
+  SELECT TRIPS.TRIP_ID 
+  FROM OBSPROD.TRIPS 
+  WHERE 
+    (
+      (TRIPS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+      TRIPS.RECORD_LAST_EDITED_ON_DATE IS NULL
+    ) OR
+    (TRIPS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+    `;
+}
+
+export function AllNewAndModifiedHauls(strDateBegin: string, strDateEnd: string){
+  return `
+    SELECT DISTINCT
+      FISHING_ACTIVITIES.TRIP_ID,
+      FISHING_ACTIVITIES.FISHING_ACTIVITY_ID, 
+      CATCHES.CATCH_ID
+
+        
+    FROM 
+    OBSPROD.FISHING_ACTIVITIES LEFT JOIN 
+    OBSPROD.CATCHES ON FISHING_ACTIVITIES.FISHING_ACTIVITY_ID = CATCHES.FISHING_ACTIVITY_ID LEFT JOIN 
+    OBSPROD.SPECIES_COMPOSITIONS ON CATCHES.CATCH_ID = SPECIES_COMPOSITIONS.CATCH_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_ITEMS ON SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID = SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_BASKETS ON SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID = SPECIES_COMPOSITION_BASKETS.SPECIES_COMP_ITEM_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMENS ON CATCHES.CATCH_ID = BIO_SPECIMENS.CATCH_ID LEFT JOIN
+    OBSPROD.LENGTH_FREQUENCIES ON BIO_SPECIMENS.BIO_SPECIMEN_ID = LENGTH_FREQUENCIES.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMEN_ITEMS ON BIO_SPECIMENS.BIO_SPECIMEN_ID = BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.DISSECTIONS ON BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ITEM_ID = DISSECTIONS.BIO_SPECIMEN_ITEM_ID
+  
+    WHERE
+      (
+        (FISHING_ACTIVITIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (FISHING_ACTIVITIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (CATCHES.CREATED_DATE  BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      )	OR
+      
+      (CATCHES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+          
+      (
+        (CATCHES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      
+      (CATCHES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (SPECIES_COMPOSITION_BASKETS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+  
+          
+      (SPECIES_COMPOSITION_BASKETS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMENS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMENS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (LENGTH_FREQUENCIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (LENGTH_FREQUENCIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMEN_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMEN_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+        
+      (
+        (DISSECTIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (DISSECTIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        DISSECTIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (DISSECTIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+  
+      ORDER BY FISHING_ACTIVITIES.TRIP_ID, FISHING_ACTIVITIES.FISHING_ACTIVITY_ID, CATCHES.CATCH_ID
+  
+      `;
+}
+
+export function AllNewAndModifiedLookups(strTableID: string, strTableName: string, strDateBegin: string, strDateEnd: string){
+  return `
+    SELECT `+ strTableID + ` 
+    FROM OBSPROD.` + strTableName + ` 
+    WHERE 
+    (
+      (` + strTableName + `.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+      ` + strTableName + `.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+    ) OR 
+    
+    (` + strTableName + `.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+    
+    (
+      (` + strTableName + `.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+      ` + strTableName + `.RECORD_LAST_EDITED_ON_DATE IS NULL
+    )	OR
+        
+    (` + strTableName + `.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+    `;
+
+
+}
+
+export function DissectionsTableSQL(strDateBegin: string, strDateEnd: string){
+  return `
+  SELECT DISTINCT
+
+
+    DISSECTIONS.DISSECTION_ID,
+    DISSECTIONS.BIO_SPECIMEN_ITEM_ID,
+    DISSECTIONS.DISSECTION_TYPE,
+    DISSECTIONS.DISSECTION_BARCODE,
+    DISSECTIONS.CREATED_BY,
+    DISSECTIONS.CREATED_DATE,
+    DISSECTIONS.MODIFIED_BY,
+    DISSECTIONS.MODIFIED_DATE,
+    DISSECTIONS.RACK_ID,
+    DISSECTIONS.RACK_POSITION,
+    DISSECTIONS.BS_RESULT,
+    DISSECTIONS.CWT_CODE,
+    DISSECTIONS.CWT_STATUS,
+    DISSECTIONS.CWT_TYPE,
+    DISSECTIONS.AGE,
+    DISSECTIONS.AGE_READER,
+    DISSECTIONS.AGE_DATE,
+    DISSECTIONS.AGE_LOCATION,
+    DISSECTIONS.AGE_METHOD,
+    DISSECTIONS.BAND_ID,
+    null,
+    DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE,
+    DISSECTIONS.RECORD_LAST_EDITED_ON_DATE,
+    DISSECTIONS.RECORD_LAST_EDITED_BY_USER,
+    DISSECTIONS.DATA_SOURCE
+  
+    FROM 
+    OBSPROD.FISHING_ACTIVITIES LEFT JOIN 
+    OBSPROD.CATCHES ON FISHING_ACTIVITIES.FISHING_ACTIVITY_ID = CATCHES.FISHING_ACTIVITY_ID LEFT JOIN 
+    OBSPROD.SPECIES_COMPOSITIONS ON CATCHES.CATCH_ID = SPECIES_COMPOSITIONS.CATCH_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_ITEMS ON SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID = SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_BASKETS ON SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID = SPECIES_COMPOSITION_BASKETS.SPECIES_COMP_ITEM_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMENS ON CATCHES.CATCH_ID = BIO_SPECIMENS.CATCH_ID LEFT JOIN
+    OBSPROD.LENGTH_FREQUENCIES ON BIO_SPECIMENS.BIO_SPECIMEN_ID = LENGTH_FREQUENCIES.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMEN_ITEMS ON BIO_SPECIMENS.BIO_SPECIMEN_ID = BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.DISSECTIONS ON BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ITEM_ID = DISSECTIONS.BIO_SPECIMEN_ITEM_ID
+  
+    WHERE
+      (
+        (FISHING_ACTIVITIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (FISHING_ACTIVITIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (CATCHES.CREATED_DATE  BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      )	OR
+      
+      (CATCHES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+          
+      (
+        (CATCHES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      
+      (CATCHES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (SPECIES_COMPOSITION_BASKETS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+  
+          
+      (SPECIES_COMPOSITION_BASKETS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMENS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMENS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (LENGTH_FREQUENCIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (LENGTH_FREQUENCIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMEN_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMEN_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+        
+      (
+        (DISSECTIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (DISSECTIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        DISSECTIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (DISSECTIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+ 
+      ORDER BY DISSECTIONS.BIO_SPECIMEN_ITEM_ID
+      `;
+}
+
+export function BioSpecimenItemsTableSQL(strDateBegin: string, strDateEnd: string){
+  return `
+  SELECT DISTINCT
+
+  
+  BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ITEM_ID,
+  BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID,
+  BIO_SPECIMEN_ITEMS.SPECIMEN_WEIGHT,
+  BIO_SPECIMEN_ITEMS.SPECIMEN_WEIGHT_UM,
+  BIO_SPECIMEN_ITEMS.SPECIMEN_LENGTH,
+  BIO_SPECIMEN_ITEMS.SPECIMEN_LENGTH_UM,
+  BIO_SPECIMEN_ITEMS.SPECIMEN_SEX,
+  BIO_SPECIMEN_ITEMS.NOTES,
+  BIO_SPECIMEN_ITEMS.CREATED_BY,
+  BIO_SPECIMEN_ITEMS.CREATED_DATE,
+  BIO_SPECIMEN_ITEMS.MODIFIED_BY,
+  BIO_SPECIMEN_ITEMS.MODIFIED_DATE,
+  BIO_SPECIMEN_ITEMS.VIABILITY,
+  BIO_SPECIMEN_ITEMS.ADIPOSE_PRESENT,
+  BIO_SPECIMEN_ITEMS.MATURITY,
+  BIO_SPECIMEN_ITEMS.DATA_SOURCE,
+  BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE,
+  BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE,
+  BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_BY_USER,
+  BIO_SPECIMEN_ITEMS.BAND_ID
+  
+    FROM 
+    OBSPROD.FISHING_ACTIVITIES LEFT JOIN 
+    OBSPROD.CATCHES ON FISHING_ACTIVITIES.FISHING_ACTIVITY_ID = CATCHES.FISHING_ACTIVITY_ID LEFT JOIN 
+    OBSPROD.SPECIES_COMPOSITIONS ON CATCHES.CATCH_ID = SPECIES_COMPOSITIONS.CATCH_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_ITEMS ON SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID = SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_BASKETS ON SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID = SPECIES_COMPOSITION_BASKETS.SPECIES_COMP_ITEM_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMENS ON CATCHES.CATCH_ID = BIO_SPECIMENS.CATCH_ID LEFT JOIN
+    OBSPROD.LENGTH_FREQUENCIES ON BIO_SPECIMENS.BIO_SPECIMEN_ID = LENGTH_FREQUENCIES.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMEN_ITEMS ON BIO_SPECIMENS.BIO_SPECIMEN_ID = BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.DISSECTIONS ON BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ITEM_ID = DISSECTIONS.BIO_SPECIMEN_ITEM_ID
+  
+    WHERE
+      (
+        (FISHING_ACTIVITIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (FISHING_ACTIVITIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (CATCHES.CREATED_DATE  BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      )	OR
+      
+      (CATCHES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+          
+      (
+        (CATCHES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      
+      (CATCHES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (SPECIES_COMPOSITION_BASKETS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+  
+          
+      (SPECIES_COMPOSITION_BASKETS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMENS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMENS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (LENGTH_FREQUENCIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (LENGTH_FREQUENCIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMEN_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMEN_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+        
+      (
+        (DISSECTIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (DISSECTIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        DISSECTIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (DISSECTIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+      
+      ORDER BY BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID
+  
+      `;
+}
+
+export function BioSpecimensTableSQL(strDateBegin: string, strDateEnd: string){
+  return `
+    SELECT DISTINCT
+
+    BIO_SPECIMENS.BIO_SPECIMEN_ID,
+    BIO_SPECIMENS.CATCH_ID,
+    BIO_SPECIMENS.SPECIES_ID,
+    BIO_SPECIMENS.SAMPLE_METHOD,
+    BIO_SPECIMENS.NOTES,
+    BIO_SPECIMENS.CREATED_BY, 
+    BIO_SPECIMENS.CREATED_DATE,
+    BIO_SPECIMENS.MODIFIED_BY,
+    BIO_SPECIMENS.MODIFIED_DATE,
+    BIO_SPECIMENS.SPECIMEN_LENGTH_KP,
+    BIO_SPECIMENS.SPECIMEN_WEIGHT_KP,
+    BIO_SPECIMENS.LF_LENGTH_KP,
+    BIO_SPECIMENS.FREQUENCY_KP,
+    BIO_SPECIMENS.DISCARD_REASON,
+    BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE,
+    BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE,
+    BIO_SPECIMENS.DATA_SOURCE,
+    BIO_SPECIMENS.RECORD_LAST_EDITED_BY_USER
+  
+    FROM 
+    OBSPROD.FISHING_ACTIVITIES LEFT JOIN 
+    OBSPROD.CATCHES ON FISHING_ACTIVITIES.FISHING_ACTIVITY_ID = CATCHES.FISHING_ACTIVITY_ID LEFT JOIN 
+    OBSPROD.SPECIES_COMPOSITIONS ON CATCHES.CATCH_ID = SPECIES_COMPOSITIONS.CATCH_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_ITEMS ON SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID = SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_BASKETS ON SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID = SPECIES_COMPOSITION_BASKETS.SPECIES_COMP_ITEM_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMENS ON CATCHES.CATCH_ID = BIO_SPECIMENS.CATCH_ID LEFT JOIN
+    OBSPROD.LENGTH_FREQUENCIES ON BIO_SPECIMENS.BIO_SPECIMEN_ID = LENGTH_FREQUENCIES.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMEN_ITEMS ON BIO_SPECIMENS.BIO_SPECIMEN_ID = BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.DISSECTIONS ON BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ITEM_ID = DISSECTIONS.BIO_SPECIMEN_ITEM_ID
+  
+    WHERE
+      (
+        (FISHING_ACTIVITIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (FISHING_ACTIVITIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (CATCHES.CREATED_DATE  BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      )	OR
+      
+      (CATCHES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+          
+      (
+        (CATCHES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      
+      (CATCHES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (SPECIES_COMPOSITION_BASKETS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+  
+          
+      (SPECIES_COMPOSITION_BASKETS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMENS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMENS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (LENGTH_FREQUENCIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (LENGTH_FREQUENCIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMEN_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMEN_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+        
+      (
+        (DISSECTIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (DISSECTIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        DISSECTIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (DISSECTIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+  
+      ORDER BY BIO_SPECIMENS.CATCH_ID
+      `;
+}
+
+export function LengthFrequenciesTableSQL(strDateBegin: string, strDateEnd: string){
+  return `
+    SELECT DISTINCT
+
+    LENGTH_FREQUENCIES.LENGTH_FREQUENCY_ID,
+    LENGTH_FREQUENCIES.LF_LENGTH,
+    LENGTH_FREQUENCIES.LF_LENGTH_UM,
+    LENGTH_FREQUENCIES.FREQUENCY,
+    LENGTH_FREQUENCIES.LF_SEX,
+    LENGTH_FREQUENCIES.NOTES,
+    LENGTH_FREQUENCIES.CREATED_BY,
+    LENGTH_FREQUENCIES.CREATED_DATE,
+    LENGTH_FREQUENCIES.MODIFIED_BY,
+    LENGTH_FREQUENCIES.MODIFIED_DATE,
+    LENGTH_FREQUENCIES.BIO_SPECIMEN_ID,
+    LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE,
+    LENGTH_FREQUENCIES.RECORD_LAST_EDITED_BY_USER,
+    LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE,
+    LENGTH_FREQUENCIES.DATA_SOURCE
+  
+    FROM 
+    OBSPROD.FISHING_ACTIVITIES LEFT JOIN 
+    OBSPROD.CATCHES ON FISHING_ACTIVITIES.FISHING_ACTIVITY_ID = CATCHES.FISHING_ACTIVITY_ID LEFT JOIN 
+    OBSPROD.SPECIES_COMPOSITIONS ON CATCHES.CATCH_ID = SPECIES_COMPOSITIONS.CATCH_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_ITEMS ON SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID = SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_BASKETS ON SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID = SPECIES_COMPOSITION_BASKETS.SPECIES_COMP_ITEM_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMENS ON CATCHES.CATCH_ID = BIO_SPECIMENS.CATCH_ID LEFT JOIN
+    OBSPROD.LENGTH_FREQUENCIES ON BIO_SPECIMENS.BIO_SPECIMEN_ID = LENGTH_FREQUENCIES.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMEN_ITEMS ON BIO_SPECIMENS.BIO_SPECIMEN_ID = BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.DISSECTIONS ON BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ITEM_ID = DISSECTIONS.BIO_SPECIMEN_ITEM_ID
+  
+    WHERE
+      (
+        (FISHING_ACTIVITIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (FISHING_ACTIVITIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (CATCHES.CREATED_DATE  BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      )	OR
+      
+      (CATCHES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+          
+      (
+        (CATCHES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      
+      (CATCHES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (SPECIES_COMPOSITION_BASKETS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+  
+          
+      (SPECIES_COMPOSITION_BASKETS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMENS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMENS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (LENGTH_FREQUENCIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (LENGTH_FREQUENCIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMEN_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMEN_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+        
+      (
+        (DISSECTIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (DISSECTIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        DISSECTIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (DISSECTIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+  
+      ORDER BY LENGTH_FREQUENCIES.BIO_SPECIMEN_ID
+      `;
+}
+
+export function SpeciesCompositionsAndItemsTableSQL(strDateBegin: string, strDateEnd: string){
+  return `
+    SELECT DISTINCT
+
+    SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID,
+    SPECIES_COMPOSITIONS.CATCH_ID,
+    SPECIES_COMPOSITIONS.SAMPLE_METHOD,
+    SPECIES_COMPOSITIONS.NOTES,
+    SPECIES_COMPOSITIONS.CREATED_BY,
+    SPECIES_COMPOSITIONS.CREATED_DATE,
+    SPECIES_COMPOSITIONS.MODIFIED_BY,
+    SPECIES_COMPOSITIONS.MODIFIED_DATE,
+    SPECIES_COMPOSITIONS.SPECIES_WEIGHT_KP,
+    SPECIES_COMPOSITIONS.SPECIES_NUMBER_KP,
+    SPECIES_COMPOSITIONS.BASKET_NUMBER,
+    SPECIES_COMPOSITIONS.DATA_QUALITY,
+    SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE,
+    SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE,
+    SPECIES_COMPOSITIONS.DATA_SOURCE,
+
+    SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID,
+    SPECIES_COMPOSITION_ITEMS.SPECIES_ID,
+    SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID,
+    SPECIES_COMPOSITION_ITEMS.SPECIES_WEIGHT,
+    SPECIES_COMPOSITION_ITEMS.SPECIES_WEIGHT_UM,
+    SPECIES_COMPOSITION_ITEMS.SPECIES_NUMBER,
+    SPECIES_COMPOSITION_ITEMS.NOTES,
+    SPECIES_COMPOSITION_ITEMS.DISCARD_REASON,
+    SPECIES_COMPOSITION_ITEMS.CREATED_BY,
+    SPECIES_COMPOSITION_ITEMS.CREATED_DATE,
+    SPECIES_COMPOSITION_ITEMS.MODIFIED_BY,
+    SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE,
+    SPECIES_COMPOSITION_ITEMS.HANDLING,
+    SPECIES_COMPOSITION_ITEMS.TOTAL_TALLY,
+    SPECIES_COMPOSITION_ITEMS.SPECIES_WEIGHT_KP_ITQ,
+    SPECIES_COMPOSITION_ITEMS.SPECIES_NUMBER_KP_ITQ,
+    SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE,
+    SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE,
+    SPECIES_COMPOSITION_ITEMS.DATA_SOURCE
+  
+    FROM 
+    OBSPROD.FISHING_ACTIVITIES LEFT JOIN 
+    OBSPROD.CATCHES ON FISHING_ACTIVITIES.FISHING_ACTIVITY_ID = CATCHES.FISHING_ACTIVITY_ID LEFT JOIN 
+    OBSPROD.SPECIES_COMPOSITIONS ON CATCHES.CATCH_ID = SPECIES_COMPOSITIONS.CATCH_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_ITEMS ON SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID = SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_BASKETS ON SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID = SPECIES_COMPOSITION_BASKETS.SPECIES_COMP_ITEM_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMENS ON CATCHES.CATCH_ID = BIO_SPECIMENS.CATCH_ID LEFT JOIN
+    OBSPROD.LENGTH_FREQUENCIES ON BIO_SPECIMENS.BIO_SPECIMEN_ID = LENGTH_FREQUENCIES.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMEN_ITEMS ON BIO_SPECIMENS.BIO_SPECIMEN_ID = BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.DISSECTIONS ON BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ITEM_ID = DISSECTIONS.BIO_SPECIMEN_ITEM_ID
+  
+    WHERE
+      (
+        (FISHING_ACTIVITIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (FISHING_ACTIVITIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (CATCHES.CREATED_DATE  BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      )	OR
+      
+      (CATCHES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+          
+      (
+        (CATCHES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      
+      (CATCHES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (SPECIES_COMPOSITION_BASKETS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+  
+          
+      (SPECIES_COMPOSITION_BASKETS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMENS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMENS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (LENGTH_FREQUENCIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (LENGTH_FREQUENCIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMEN_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMEN_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+        
+      (
+        (DISSECTIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (DISSECTIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        DISSECTIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (DISSECTIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+  
+      ORDER BY SPECIES_COMPOSITIONS.CATCH_ID
+      `;
+}
+
+export function CatchesTableSQL(strDateBegin: string, strDateEnd: string){
+  return `
+    SELECT DISTINCT
+
+    CATCHES.CATCH_ID,
+CATCHES.CATCH_NUM,
+CATCHES.CATCH_CATEGORY_ID,
+CATCHES.CATCH_WEIGHT,
+CATCHES.CATCH_WEIGHT_UM,
+CATCHES.CATCH_WEIGHT_METHOD,
+CATCHES.CATCH_COUNT,
+CATCHES.CATCH_DISPOSITION,
+CATCHES.DISCARD_REASON,
+CATCHES.CATCH_PURITY,
+CATCHES.VOLUME,
+CATCHES.VOLUME_UM,
+CATCHES.DENSITY,
+CATCHES.DENSITY_UM,
+CATCHES.NOTES,
+CATCHES.CREATED_BY,
+CATCHES.CREATED_DATE,
+CATCHES.MODIFIED_BY,
+CATCHES.RECORD_LAST_EDITED_ON_DATE,
+CATCHES.HOOKS_SAMPLED,
+CATCHES.SAMPLE_WEIGHT,
+CATCHES.SAMPLE_WEIGHT_UM,
+CATCHES.SAMPLE_COUNT,
+CATCHES.CATCH_WEIGHT_ITQ,
+CATCHES.LENGTH_ITQ,
+CATCHES.DENSITY_BASKET_WEIGHT_ITQ,
+CATCHES.WIDTH_ITQ,
+CATCHES.DEPTH_ITQ,
+CATCHES.BASKETS_WEIGHED_ITQ,
+CATCHES.TOTAL_BASKETS_ITQ,
+CATCHES.PARTIAL_BASKET_WEIGHT_ITQ,
+CATCHES.UNITS_SAMPLED_ITQ,
+CATCHES.TOTAL_UNITS_ITQ,
+CATCHES.GEAR_SEGMENTS_SAMPLED,
+CATCHES.BASKET_WEIGHT_KP,
+CATCHES.ADDL_BASKET_WEIGHT_KP,
+CATCHES.BASKET_WEIGHT_COUNT_KP,
+CATCHES.DATA_SOURCE,
+CATCHES.MODIFIED_DATE,
+CATCHES.RECORD_LAST_EDITED_BY_USER
+  
+    FROM 
+    OBSPROD.FISHING_ACTIVITIES LEFT JOIN 
+    OBSPROD.CATCHES ON FISHING_ACTIVITIES.FISHING_ACTIVITY_ID = CATCHES.FISHING_ACTIVITY_ID LEFT JOIN 
+    OBSPROD.SPECIES_COMPOSITIONS ON CATCHES.CATCH_ID = SPECIES_COMPOSITIONS.CATCH_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_ITEMS ON SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID = SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_BASKETS ON SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID = SPECIES_COMPOSITION_BASKETS.SPECIES_COMP_ITEM_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMENS ON CATCHES.CATCH_ID = BIO_SPECIMENS.CATCH_ID LEFT JOIN
+    OBSPROD.LENGTH_FREQUENCIES ON BIO_SPECIMENS.BIO_SPECIMEN_ID = LENGTH_FREQUENCIES.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMEN_ITEMS ON BIO_SPECIMENS.BIO_SPECIMEN_ID = BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.DISSECTIONS ON BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ITEM_ID = DISSECTIONS.BIO_SPECIMEN_ITEM_ID
+  
+    WHERE
+      (
+        (FISHING_ACTIVITIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (FISHING_ACTIVITIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (CATCHES.CREATED_DATE  BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      )	OR
+      
+      (CATCHES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+          
+      (
+        (CATCHES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      
+      (CATCHES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (SPECIES_COMPOSITION_BASKETS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+  
+          
+      (SPECIES_COMPOSITION_BASKETS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMENS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMENS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (LENGTH_FREQUENCIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (LENGTH_FREQUENCIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMEN_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMEN_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+        
+      (
+        (DISSECTIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (DISSECTIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        DISSECTIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (DISSECTIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+  `;
+}
+
+export function HaulsTableSQL(strDateBegin: string, strDateEnd: string){
+  return `
+    SELECT DISTINCT
+
+    FISHING_ACTIVITIES.FISHING_ACTIVITY_ID,
+    FISHING_ACTIVITIES.FISHING_ACTIVITY_NUM,
+    FISHING_ACTIVITIES.OBSERVER_TOTAL_CATCH,
+    FISHING_ACTIVITIES.OTC_WEIGHT_UM,
+    FISHING_ACTIVITIES.OTC_WEIGHT_METHOD,
+    FISHING_ACTIVITIES.TOTAL_HOOKS,
+    FISHING_ACTIVITIES.GEAR_TYPE,
+    FISHING_ACTIVITIES.GEAR_PERFORMANCE,
+    FISHING_ACTIVITIES.BEAUFORT_VALUE,
+    FISHING_ACTIVITIES.VOLUME,
+    FISHING_ACTIVITIES.VOLUME_UM,
+    FISHING_ACTIVITIES.DENSITY,
+    FISHING_ACTIVITIES.DENSITY_UM,
+    FISHING_ACTIVITIES.NOTES,
+    FISHING_ACTIVITIES.CREATED_BY,
+    FISHING_ACTIVITIES.CREATED_DATE,
+    FISHING_ACTIVITIES.MODIFIED_BY,
+    FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE,
+    FISHING_ACTIVITIES.TARGET_STRATEGY_ID,
+    FISHING_ACTIVITIES.CATCH_WEIGHT_KP,
+    FISHING_ACTIVITIES.CATCH_COUNT_KP,
+    FISHING_ACTIVITIES.HOOKS_SAMPLED_KP,
+    FISHING_ACTIVITIES.EFP,
+    FISHING_ACTIVITIES.SAMPLE_WEIGHT_KP,
+    FISHING_ACTIVITIES.SAMPLE_COUNT_KP,
+    FISHING_ACTIVITIES.DETERRENT_USED,
+    FISHING_ACTIVITIES.AVG_SOAK_TIME,
+    FISHING_ACTIVITIES.TOT_GEAR_SEGMENTS,
+    FISHING_ACTIVITIES.GEAR_SEGMENTS_LOST,
+    FISHING_ACTIVITIES.TOTAL_HOOKS_LOST,
+    FISHING_ACTIVITIES.EXCLUDER_TYPE,
+    FISHING_ACTIVITIES.DATA_SOURCE,
+    FISHING_ACTIVITIES.DATA_QUALITY,
+    FISHING_ACTIVITIES.CAL_WEIGHT,
+    FISHING_ACTIVITIES.FIT,
+    FISHING_ACTIVITIES.BRD_PRESENT,
+    FISHING_ACTIVITIES.TRIP_ID, 
+    FISHING_ACTIVITIES.MODIFIED_DATE,
+    FISHING_ACTIVITIES.RECORD_LAST_EDITED_BY_USER,
+    FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE
+  
+    FROM 
+    OBSPROD.FISHING_ACTIVITIES LEFT JOIN 
+    OBSPROD.CATCHES ON FISHING_ACTIVITIES.FISHING_ACTIVITY_ID = CATCHES.FISHING_ACTIVITY_ID LEFT JOIN 
+    OBSPROD.SPECIES_COMPOSITIONS ON CATCHES.CATCH_ID = SPECIES_COMPOSITIONS.CATCH_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_ITEMS ON SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID = SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID LEFT JOIN
+    OBSPROD.SPECIES_COMPOSITION_BASKETS ON SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID = SPECIES_COMPOSITION_BASKETS.SPECIES_COMP_ITEM_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMENS ON CATCHES.CATCH_ID = BIO_SPECIMENS.CATCH_ID LEFT JOIN
+    OBSPROD.LENGTH_FREQUENCIES ON BIO_SPECIMENS.BIO_SPECIMEN_ID = LENGTH_FREQUENCIES.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.BIO_SPECIMEN_ITEMS ON BIO_SPECIMENS.BIO_SPECIMEN_ID = BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ID LEFT JOIN
+    OBSPROD.DISSECTIONS ON BIO_SPECIMEN_ITEMS.BIO_SPECIMEN_ITEM_ID = DISSECTIONS.BIO_SPECIMEN_ITEM_ID
+  
+    WHERE
+      (
+        (FISHING_ACTIVITIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (FISHING_ACTIVITIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (FISHING_ACTIVITIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (FISHING_ACTIVITIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (CATCHES.CREATED_DATE  BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      )	OR
+      
+      (CATCHES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+          
+      (
+        (CATCHES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        CATCHES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      
+      (CATCHES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (SPECIES_COMPOSITION_BASKETS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (SPECIES_COMPOSITION_BASKETS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+  
+          
+      (SPECIES_COMPOSITION_BASKETS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMENS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMENS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMENS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMENS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (LENGTH_FREQUENCIES.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (LENGTH_FREQUENCIES.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (LENGTH_FREQUENCIES.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (LENGTH_FREQUENCIES.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+      (
+        (BIO_SPECIMEN_ITEMS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (BIO_SPECIMEN_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (BIO_SPECIMEN_ITEMS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (BIO_SPECIMEN_ITEMS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR
+      
+        
+      (
+        (DISSECTIONS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND 
+        DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE IS NULL
+      ) OR 
+      
+      (DISSECTIONS.RECORD_COMPUTER_LOAD_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) OR 
+      
+      (
+        (DISSECTIONS.MODIFIED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
+        DISSECTIONS.RECORD_LAST_EDITED_ON_DATE IS NULL
+      )	OR
+          
+      (DISSECTIONS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
+  `;
+}
+
+export function HlfcTableSQL(){
+  return `
+    SELECT DISTINCT
+
+    HLFC.HLFC_ID,
+    HLFC.TRIP_ID,
+    HLFC.FISHING_ACTIVITY_ID,
+    HLFC.PRODUCT_DELIVERY,
+    HLFC.SPEED,
+    HLFC.HOOKS_PER_SKATE,
+    HLFC.FLOATS_USED,
+    HLFC.FLOATS_PER_SKATE,
+    HLFC.WEIGHTS_USED,
+    HLFC.MASS_PER_WEIGHT,
+    HLFC.WEIGHTS_PER_SKATE,
+    HLFC.AVOIDANCE_GEAR_USED,
+    HLFC.MITIGATION_TYPE,
+    HLFC.AVG_AERIAL_EXTENT,
+    HLFC.HORIZONTAL_DISTANCE,
+    HLFC.NOTES,
+    HLFC.CREATED_BY,
+    HLFC.CREATED_DATE,
+    HLFC.MODIFIED_BY,
+    HLFC.MODIFIED_DATE,
+    HLFC.DATA_SOURCE,
+    HLFC.ROW_STATUS,
+    HLFC.ROW_PROCESSED,
+    HLFC.RECORD_CHANGE_COMMENT
+  
+    FROM OBSPROD.HLFC
+
+    ORDER BY HLFC.TRIP_ID
+ 
+    `;
+}
+
+export function SpeciesSightingsTableSQL(){
+  return `SELECT
+
+  SPECIES_SIGHTINGS.SPECIES_SIGHTING_ID,
+  SPECIES_SIGHTINGS.TRIP_ID,
+  SPECIES_SIGHTINGS.SPECIES_ID,
+  SPECIES_SIGHTINGS.SIGHTING_DATE,
+  SPECIES_SIGHTINGS.SIGHTING_LATITUDE,
+  SPECIES_SIGHTINGS.SIGHTING_LONGITUDE,
+  SPECIES_SIGHTINGS.SPECIES_MIN_NUMBER,
+  SPECIES_SIGHTINGS.SPECIES_MAX_NUMBER,
+  SPECIES_SIGHTINGS.SPECIES_BEST_NUMBER,
+  SPECIES_SIGHTINGS.APPROACH_DISTANCE,
+  SPECIES_SIGHTINGS.APPROACH_DISTANCE_UM,
+  SPECIES_SIGHTINGS.CONFIDENCE,
+  SPECIES_SIGHTINGS.BODY_LENGTH,
+  SPECIES_SIGHTINGS.SIGHTING_CONDITION,
+  SPECIES_SIGHTINGS.BEAUFORT_VALUE,
+  SPECIES_SIGHTINGS.WATER_TEMPERATURE,
+  SPECIES_SIGHTINGS.WATER_TEMPERATURE_UM,
+  SPECIES_SIGHTINGS.NOTES,
+  SPECIES_SIGHTINGS.CREATED_BY,
+  SPECIES_SIGHTINGS.CREATED_DATE,
+  SPECIES_SIGHTINGS.MODIFIED_BY,
+  SPECIES_SIGHTINGS.MODIFIED_DATE,
+  SPECIES_SIGHTINGS.FISHING_ACTIVITY_ID,
+  SPECIES_SIGHTINGS.RECORD_COMPUTER_LOAD_ON_DATE,
+  SPECIES_SIGHTINGS.RECORD_LAST_EDITED_BY_USER,
+  SPECIES_SIGHTINGS.RECORD_LAST_EDITED_ON_DATE,
+  SPECIES_SIGHTINGS.DATA_SOURCE,
+  SPECIES_SIGHTINGS.INTERACTION_OUTCOME,
+  SPECIES_SIGHTINGS.INTERACTION_BEHAVIORS
+  
+  FROM OBSPROD.SPECIES_SIGHTINGS
+
+  ORDER BY SPECIES_SIGHTINGS.TRIP_ID
+  `;
+}
+
+export function SpeciesInteractionsTableSQL(){
+  return `SELECT
+
+  SPECIES_INTERACTIONS.SPECIES_INTERACTION_ID,
+  SPECIES_INTERACTIONS.SPECIES_SIGHTING_ID,
+  SPECIES_INTERACTIONS.SPECIES_INTERACTION_TYPE,
+  SPECIES_INTERACTIONS.CREATED_BY,
+  SPECIES_INTERACTIONS.CREATED_DATE,
+  SPECIES_INTERACTIONS.MODIFIED_BY,
+  SPECIES_INTERACTIONS.MODIFIED_DATE,
+  SPECIES_INTERACTIONS.RECORD_COMPUTER_LOAD_ON_DATE,
+  SPECIES_INTERACTIONS.RECORD_LAST_EDITED_BY_USER,
+  SPECIES_INTERACTIONS.RECORD_LAST_EDITED_ON_DATE,
+  SPECIES_INTERACTIONS.DATA_SOURCE
+  
+  FROM OBSPROD.SPECIES_INTERACTIONS
+
+  ORDER BY SPECIES_INTERACTIONS.SPECIES_SIGHTING_ID
+  `;
+}
+
+export function SpeciesInteractionHaulsXREFTableSQL(){
+  return `SELECT
+
+  SPECIES_INTERACTION_HAULS_XREF.SI_HAUL_ID,
+  SPECIES_INTERACTION_HAULS_XREF.SPECIES_SIGHTING_ID,
+  SPECIES_INTERACTION_HAULS_XREF.FISHING_ACTIVITY_ID,
+  SPECIES_INTERACTION_HAULS_XREF.CREATED_BY,
+  SPECIES_INTERACTION_HAULS_XREF.CREATED_DATE,
+  SPECIES_INTERACTION_HAULS_XREF.MODIFIED_BY,
+  SPECIES_INTERACTION_HAULS_XREF.MODIFIED_DATE
+  
+  FROM OBSPROD.SPECIES_INTERACTION_HAULS_XREF
+  `;
+}
+
+export function FishTicketsTableSQL(){
+
+  return `
+  SELECT 
+  FISH_TICKET_ID,
+  FISH_TICKET_NUMBER,
+  CREATED_BY,
+  CREATED_DATE,
+  MODIFIED_BY,
+  MODIFIED_DATE,
+  TRIP_ID,
+  STATE_AGENCY,
+  FISH_TICKET_DATE,
+  RECORD_COMPUTER_LOAD_ON_DATE,
+  RECORD_LAST_EDITED_ON_DATE,
+  DATA_SOURCE
+  
+  FROM OBSPROD.FISH_TICKETS
+  
+  ORDER BY FISH_TICKETS.TRIP_ID
+  
+  `
+
+}
+
+export function FishingLocationsTableSQL(){
+  return `
+  SELECT 
+
+  FISHING_LOCATION_ID,
+  FISHING_ACTIVITY_ID,
+  LOCATION_DATE,
+  LATITUDE,
+  LONGITUDE,
+  DEPTH,
+  DEPTH_UM,
+  POSITION,
+  CREATED_BY,
+  CREATED_DATE,
+  MODIFIED_BY,
+  MODIFIED_DATE,
+  NOTES,
+  RECORD_COMPUTER_LOAD_ON_DATE,
+  RECORD_LAST_EDITED_BY_USER,
+  RECORD_LAST_EDITED_ON_DATE,
+  DATA_SOURCE
+
+  FROM OBSPROD.FISHING_LOCATIONS
+
+  ORDER BY FISHING_LOCATIONS.FISHING_ACTIVITY_ID
+
+  `;
+}
+
+export var strReceiverSQL = `
+SELECT 
+IFQ_DEALER_ID,
+AGENCY_ID,
+RECEIVER_NUMBER,
+DEALER_NUMBER,
+DEALER_NAME,
+PORT_CODE,
+CREATED_DATE,
+CREATED_BY,
+RECEIVER_CODE,
+ACTIVE
+
+FROM OBSPROD.IFQ_DEALERS
+
+WHERE
+  IFQ_DEALER_ID = 
+ `
+
+export var strCatchSQL = `
+SELECT 
+CATCHES.CATCH_ID,
+CATCHES.CATCH_NUM,
+CATCHES.CATCH_CATEGORY_ID,
+CATCHES.CATCH_WEIGHT,
+CATCHES.CATCH_WEIGHT_UM,
+CATCHES.CATCH_WEIGHT_METHOD,
+CATCHES.CATCH_COUNT,
+CATCHES.CATCH_DISPOSITION,
+CATCHES.DISCARD_REASON,
+CATCHES.CATCH_PURITY,
+CATCHES.VOLUME,
+CATCHES.VOLUME_UM,
+CATCHES.DENSITY,
+CATCHES.DENSITY_UM,
+CATCHES.NOTES,
+CATCHES.CREATED_BY,
+CATCHES.CREATED_DATE,
+CATCHES.MODIFIED_BY,
+CATCHES.RECORD_LAST_EDITED_ON_DATE,
+CATCHES.HOOKS_SAMPLED,
+CATCHES.SAMPLE_WEIGHT,
+CATCHES.SAMPLE_WEIGHT_UM,
+CATCHES.SAMPLE_COUNT,
+CATCHES.CATCH_WEIGHT_ITQ,
+CATCHES.LENGTH_ITQ,
+CATCHES.DENSITY_BASKET_WEIGHT_ITQ,
+CATCHES.WIDTH_ITQ,
+CATCHES.DEPTH_ITQ,
+CATCHES.BASKETS_WEIGHED_ITQ,
+CATCHES.TOTAL_BASKETS_ITQ,
+CATCHES.PARTIAL_BASKET_WEIGHT_ITQ,
+CATCHES.UNITS_SAMPLED_ITQ,
+CATCHES.TOTAL_UNITS_ITQ,
+CATCHES.GEAR_SEGMENTS_SAMPLED,
+CATCHES.BASKET_WEIGHT_KP,
+CATCHES.ADDL_BASKET_WEIGHT_KP,
+CATCHES.BASKET_WEIGHT_COUNT_KP,
+CATCHES.DATA_SOURCE,
+CATCHES.MODIFIED_DATE,
+CATCHES.RECORD_LAST_EDITED_BY_USER
+
+FROM OBSPROD.CATCHES 
+
+WHERE 
+  CATCH_ID = `;
+
+
+export var strSpeciesCompSQL = `
+SELECT 
+
+SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID,
+SPECIES_COMPOSITIONS.CATCH_ID,
+SPECIES_COMPOSITIONS.SAMPLE_METHOD,
+SPECIES_COMPOSITIONS.NOTES,
+SPECIES_COMPOSITIONS.CREATED_BY,
+SPECIES_COMPOSITIONS.CREATED_DATE,
+SPECIES_COMPOSITIONS.MODIFIED_BY,
+SPECIES_COMPOSITIONS.MODIFIED_DATE,
+SPECIES_COMPOSITIONS.SPECIES_WEIGHT_KP,
+SPECIES_COMPOSITIONS.SPECIES_NUMBER_KP,
+SPECIES_COMPOSITIONS.BASKET_NUMBER,
+SPECIES_COMPOSITIONS.DATA_QUALITY,
+SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE,
+SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE,
+SPECIES_COMPOSITIONS.DATA_SOURCE,
+
+SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID,
+SPECIES_COMPOSITION_ITEMS.SPECIES_ID,
+SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID,
+SPECIES_COMPOSITION_ITEMS.SPECIES_WEIGHT,
+SPECIES_COMPOSITION_ITEMS.SPECIES_WEIGHT_UM,
+SPECIES_COMPOSITION_ITEMS.SPECIES_NUMBER,
+SPECIES_COMPOSITION_ITEMS.NOTES,
+SPECIES_COMPOSITION_ITEMS.DISCARD_REASON,
+SPECIES_COMPOSITION_ITEMS.CREATED_BY,
+SPECIES_COMPOSITION_ITEMS.CREATED_DATE,
+SPECIES_COMPOSITION_ITEMS.MODIFIED_BY,
+SPECIES_COMPOSITION_ITEMS.MODIFIED_DATE,
+SPECIES_COMPOSITION_ITEMS.HANDLING,
+SPECIES_COMPOSITION_ITEMS.TOTAL_TALLY,
+SPECIES_COMPOSITION_ITEMS.SPECIES_WEIGHT_KP_ITQ,
+SPECIES_COMPOSITION_ITEMS.SPECIES_NUMBER_KP_ITQ,
+SPECIES_COMPOSITION_ITEMS.RECORD_COMPUTER_LOAD_ON_DATE,
+SPECIES_COMPOSITION_ITEMS.RECORD_LAST_EDITED_ON_DATE,
+SPECIES_COMPOSITION_ITEMS.DATA_SOURCE
+
+
+FROM OBSPROD.SPECIES_COMPOSITIONS JOIN OBSPROD.SPECIES_COMPOSITION_ITEMS ON SPECIES_COMPOSITIONS.SPECIES_COMPOSITION_ID = SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID
+
+WHERE 
+SPECIES_COMPOSITIONS.CATCH_ID = 
+`
+
+export var strSpeciesCompBasketsSQL = `
+SELECT 
+
+SPECIES_COMP_BASKET_ID,
+SPECIES_COMP_ITEM_ID,
+BASKET_WEIGHT_ITQ,
+FISH_NUMBER_ITQ,
+CREATED_DATE,
+CREATED_BY,
+MODIFIED_BY,
+RECORD_COMPUTER_LOAD_ON_DATE,
+RECORD_LAST_EDITED_ON_DATE,
+DATA_SOURCE,
+RECORD_LAST_EDITED_BY_USER
+
+FROM OBSPROD.SPECIES_COMPOSITION_BASKETS
+
+ORDER BY SPECIES_COMPOSITION_BASKETS.SPECIES_COMP_ITEM_ID
+`
+
+
+export var strBioSpecimensSQL = `
+SELECT 
+BIO_SPECIMEN_ID,
+CATCH_ID,
+SPECIES_ID,
+SAMPLE_METHOD,
+NOTES,
+CREATED_BY, 
+CREATED_DATE,
+MODIFIED_BY,
+MODIFIED_DATE,
+SPECIMEN_LENGTH_KP,
+SPECIMEN_WEIGHT_KP,
+LF_LENGTH_KP,
+FREQUENCY_KP,
+DISCARD_REASON,
+RECORD_COMPUTER_LOAD_ON_DATE,
+RECORD_LAST_EDITED_ON_DATE,
+DATA_SOURCE,
+RECORD_LAST_EDITED_BY_USER
+
+FROM OBSPROD.BIO_SPECIMENS
+
+WHERE 
+  CATCH_ID = `;
+
+
+export var strBioSpecimenItemsSQL = `
+SELECT 
+
+BIO_SPECIMEN_ITEM_ID,
+BIO_SPECIMEN_ID,
+SPECIMEN_WEIGHT,
+SPECIMEN_WEIGHT_UM,
+SPECIMEN_LENGTH,
+SPECIMEN_LENGTH_UM,
+SPECIMEN_SEX,
+NOTES,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+MODIFIED_DATE,
+VIABILITY,
+ADIPOSE_PRESENT,
+MATURITY,
+DATA_SOURCE,
+RECORD_COMPUTER_LOAD_ON_DATE,
+RECORD_LAST_EDITED_ON_DATE,
+RECORD_LAST_EDITED_BY_USER,
+BAND_ID
+
+FROM OBSPROD.BIO_SPECIMEN_ITEMS
+
+WHERE
+BIO_SPECIMEN_ID = 
+`
+
+export var strLengthFrequenciesSQL = `
+SELECT 
+
+LENGTH_FREQUENCY_ID,
+LF_LENGTH,
+LF_LENGTH_UM,
+FREQUENCY,
+LF_SEX,
+NOTES,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+MODIFIED_DATE,
+BIO_SPECIMEN_ID,
+RECORD_COMPUTER_LOAD_ON_DATE,
+RECORD_LAST_EDITED_BY_USER,
+RECORD_LAST_EDITED_ON_DATE,
+DATA_SOURCE
+
+FROM OBSPROD.LENGTH_FREQUENCIES
+
+WHERE
+  BIO_SPECIMEN_ID = 
+`
+
+export var strDissectionsSQL = `
+SELECT
+
+DISSECTION_ID,
+BIO_SPECIMEN_ITEM_ID,
+DISSECTION_TYPE,
+DISSECTION_BARCODE,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+MODIFIED_DATE,
+RACK_ID,
+RACK_POSITION,
+BS_RESULT,
+CWT_CODE,
+CWT_STATUS,
+CWT_TYPE,
+AGE,
+AGE_READER,
+AGE_DATE,
+AGE_LOCATION,
+AGE_METHOD,
+BAND_ID,
+RECORD_HISTORY,
+RECORD_COMPUTER_LOAD_ON_DATE,
+RECORD_LAST_EDITED_ON_DATE,
+RECORD_LAST_EDITED_BY_USER,
+DATA_SOURCE
+
+FROM OBSPROD.DISSECTIONS
+
+WHERE
+  BIO_SPECIMEN_ITEM_ID = 
+`
+
+export var strSpeciesSQL = `
+SELECT
+
+SPECIES_ID,
+SCIENTIFIC_NAME,
+COMMON_NAME,
+RACE_CODE,
+PACFIN_CODE,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+MODIFIED_DATE,
+SPECIES_CODE,
+SPECIES_CATEGORY,
+SPECIES_SUB_CATEGORY,
+PRIORITY_SPECIES,
+BS_SPECIES,
+FORM_REQUIRED,
+RECORD_COMPUTER_LOAD_ON_DATE,
+RECORD_LAST_EDITED_ON_DATE,
+ACTIVE,
+RECORD_LAST_EDITED_BY_USER
+
+FROM OBSPROD.SPECIES
+
+WHERE
+  SPECIES_ID = `;
+
+
+
+
+export var strHaulSQL = `
+SELECT 
+
+FISHING_ACTIVITY_ID,
+FISHING_ACTIVITY_NUM,
+OBSERVER_TOTAL_CATCH,
+OTC_WEIGHT_UM,
+OTC_WEIGHT_METHOD,
+TOTAL_HOOKS,
+GEAR_TYPE,
+GEAR_PERFORMANCE,
+BEAUFORT_VALUE,
+VOLUME,
+VOLUME_UM,
+DENSITY,
+DENSITY_UM,
+NOTES,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+RECORD_LAST_EDITED_ON_DATE,
+TARGET_STRATEGY_ID,
+CATCH_WEIGHT_KP,
+CATCH_COUNT_KP,
+HOOKS_SAMPLED_KP,
+EFP,
+SAMPLE_WEIGHT_KP,
+SAMPLE_COUNT_KP,
+DETERRENT_USED,
+AVG_SOAK_TIME,
+TOT_GEAR_SEGMENTS,
+GEAR_SEGMENTS_LOST,
+TOTAL_HOOKS_LOST,
+EXCLUDER_TYPE,
+DATA_SOURCE,
+DATA_QUALITY,
+CAL_WEIGHT,
+FIT,
+BRD_PRESENT,
+TRIP_ID, 
+MODIFIED_DATE,
+RECORD_LAST_EDITED_BY_USER,
+RECORD_COMPUTER_LOAD_ON_DATE
+
+FROM OBSPROD.FISHING_ACTIVITIES 
+WHERE 
+  FISHING_ACTIVITY_ID = `;
+
+
+
+export var strTripSQL = `
+SELECT 
+
+TRIP_ID,
+VESSEL_ID,
+USER_ID,
+PROGRAM_ID,
+DEBRIEFING_ID,
+TRIP_STATUS,
+DEPARTURE_PORT_ID,
+DEPARTURE_DATE,
+RETURN_PORT_ID,
+RETURN_DATE,
+LOGBOOK_NUMBER,
+NOTES,
+DATA_QUALITY,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+RECORD_LAST_EDITED_ON_DATE,
+OTC_KP,
+TOTAL_HOOKS_KP,
+OBSERVER_LOGBOOK,
+EVALUATION_ID,
+PARTIAL_TRIP,
+SKIPPER_ID,
+FISHERY,
+CREW_SIZE,
+PERMIT_NUMBER,
+LICENSE_NUMBER,
+LOGBOOK_TYPE,
+FIRST_RECEIVER,
+EXPORT,
+EXTERNAL_TRIP_ID,
+DO_EXPAND,
+RUN_TER,
+DATA_SOURCE,
+FISH_PROCESSED,
+NO_FISHING_ACTIVITY,
+INTENDED_GEAR_TYPE,
+TOTAL_FISHING_DAYS, 
+MODIFIED_DATE,
+RECORD_LAST_EDITED_BY_USER,
+RECORD_COMPUTER_LOAD_ON_DATE
+
+FROM OBSPROD.TRIPS 
+WHERE 
+  TRIP_ID = `;
+
+
+export var strPortSQL = `
+SELECT
+PORT_ID,
+PORT_NAME,
+PORT_CODE,
+PORT_GROUP,
+STATE,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+RECORD_LAST_EDITED_ON_DATE,
+IFQ_PORT_ID,
+IFQ_PORT_CODE,
+MODIFIED_DATE,
+RECORD_LAST_EDITED_BY_USER
+
+FROM OBSPROD.PORTS
+WHERE
+  PORT_ID = `
+
+
+export var strVesselSQL = `
+SELECT
+VESSEL_ID,
+PORT_ID,
+VESSEL_NAME,
+VESSEL_TYPE,
+COAST_GUARD_NUMBER,
+STATE_REG_NUMBER,
+REGISTERED_LENGTH,
+REGISTERED_LENGTH_UM,
+SAFETY_DECAL_EXP,
+VESSEL_STATUS,
+NOTES,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+RECORD_LAST_EDITED_ON_DATE,
+MODIFIED_DATE,
+RECORD_LAST_EDITED_BY_USER,
+RECORD_COMPUTER_LOAD_ON_DATE
+  
+FROM OBSPROD.VESSELS
+WHERE
+  VESSEL_ID = `
+
+
+
+export var strUserSQL = `
+SELECT
+u1.USER_ID,
+u1.FIRST_NAME,
+u1.LAST_NAME,
+u1.STATUS,
+u1.CREATED_BY,
+u1.CREATED_DATE,
+u1.MODIFIED_BY,
+u1.RECORD_LAST_EDITED_ON_DATE,
+u2.FIRST_NAME AS cfirstname, 
+u2.LAST_NAME as clastname, 
+u3.FIRST_NAME as mfirstname, 
+u3.LAST_NAME as mlastname
+
+FROM 
+OBSPROD.USERS u1 LEFT JOIN 
+OBSPROD.USERS u2 ON u1.CREATED_BY = u2.USER_ID LEFT JOIN
+OBSPROD.USERS u3 ON u1.MODIFIED_BY = u3.USER_ID
+
+WHERE
+  u1.USER_ID = `
+
+
+
+export var strProgramSQL = `
+SELECT
+PROGRAM_ID,
+PROGRAM_NAME,
+DESCRIPTION,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+RECORD_LAST_EDITED_ON_DATE,
+MODIFIED_DATE,
+RECORD_LAST_EDITED_BY_USER,
+RECORD_COMPUTER_LOAD_ON_DATE
+  
+FROM OBSPROD.PROGRAMS
+WHERE
+  PROGRAM_ID = `
+
+
+
+export var strCatchCategorySQL = `
+SELECT
+CATCH_CATEGORY_ID,
+CATCH_CATEGORY_NAME,
+CATCH_CATEGORY_CODE
+    
+FROM OBSPROD.CATCH_CATEGORIES
+`
+
+
+  
+
+export var strContactSQL = `
+SELECT
+CONTACT_ID,
+USER_ID,
+FIRST_NAME,
+LAST_NAME,
+ADDRESS_LINE1,
+ADDRESS_LINE2,
+CITY,
+STATE,
+ZIP_CODE,
+COUNTRY,
+HOME_PHONE,
+WORK_PHONE,
+CELL_PHONE,
+WORK_EMAIL,
+HOME_EMAIL,
+EPRIB_UIN,
+EPIRB_SERIAL_NUMBER,
+PORT_ID,
+CONTACT_TYPE,
+CONTACT_CATEGORY,
+RELATIONSHIP,
+NOTES,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+RECORD_LAST_EDITED_ON_DATE,
+BIRTHDATE,
+LICENSE_NUMBER,
+EPIRB_UIN_2,
+MODIFIED_DATE,
+RECORD_LAST_EDITED_BY_USER
+
+    
+FROM OBSPROD.CONTACTS
+WHERE
+CONTACT_ID = `
+
+
+
+
+export var strVesselContactSQL = `
+SELECT
+VESSEL_CONTACT_ID,
+VESSEL_ID,
+CONTACT_ID,
+CONTACT_TYPE,
+CONTACT_STATUS,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+RECORD_LAST_EDITED_ON_DATE
+
+    
+FROM OBSPROD.VESSEL_CONTACTS
+WHERE
+VESSEL_CONTACT_ID = `
+
+
+
+export var strLookupSQL = `
+SELECT 
+LOOKUP_ID,
+LOOKUP_TYPE,
+LOOKUP_VALUE,
+DESCRIPTION,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+RECORD_LAST_EDITED_ON_DATE,
+PROGRAM_ID,
+ACTIVE,
+SORT_ORDER,
+RECORD_COMPUTER_LOAD_ON_DATE,
+MODIFIED_DATE,
+RECORD_LAST_EDITED_BY_USER
+
+FROM OBSPROD.LOOKUPS
+WHERE
+  LOOKUP_TYPE = 
+`
+
+
+
+
+export let strFishTicketSQL: string =  `
+SELECT 
+
+FISH_TICKET_ID
+FISH_TICKET_NUMBER
+CREATED_BY
+CREATED_DATE
+MODIFIED_BY
+MODIFIED_DATE
+TRIP_ID
+STATE_AGENCY
+FISH_TICKET_DATE
+RECORD_COMPUTER_LOAD_ON_DATE
+RECORD_LAST_EDITED_ON_DATE
+DATA_SOURCE
+
+FROM FISH_TICKETS
+
+WHERE
+  FISH_TICKET_ID = 
+`;
+
+
+
+
+export let strTripCertificateSQL: string =  `
+
+TRIP_CERTIFICATE_ID
+TRIP_ID
+CERTIFICATE_NUMBER
+CREATED_DATE
+CREATED_BY
+MODIFIED_DATE
+MODIFIED_BY
+CERTIFICATION_ID
+RECORD_COMPUTER_LOAD_ON_DATE
+RECORD_LAST_EDITED_ON_DATE
+DATA_SOURCE
+
+FROM TRIP_CERTIFICATES
+
+WHERE
+  TRIP_CERTIFICATE_ID = 
+`;
+
+
+export let strHLFCSQL: string =  `
+SELECT
+HLFC_ID,
+TRIP_ID,
+FISHING_ACTIVITY_ID,
+PRODUCT_DELIVERY,
+SPEED,
+HOOKS_PER_SKATE,
+FLOATS_USED,
+FLOATS_PER_SKATE,
+WEIGHTS_USED,
+MASS_PER_WEIGHT,
+WEIGHTS_PER_SKATE,
+AVOIDANCE_GEAR_USED,
+MITIGATION_TYPE,
+AVG_AERIAL_EXTENT,
+HORIZONTAL_DISTANCE,
+NOTES,
+CREATED_BY,
+CREATED_DATE,
+MODIFIED_BY,
+MODIFIED_DATE,
+DATA_SOURCE,
+ROW_STATUS,
+ROW_PROCESSED,
+RECORD_CHANGE_COMMENT
+
+FROM HLFC
+
+WHERE
+  HLFC_ID = 
+`;
+
+
+export let strBRDSQL: string =  `
+BRD_ID
+TRIP_ID
+FISHING_ACTIVITY_ID
+NOTES
+CREATED_BY
+CREATED_DATE
+MODIFIED_BY
+MODIFIED_DATE
+DATA_SOURCE
+ROW_STATUS
+ROW_PROCESSED
+RECORD_CHANGE_COMMENT
+
+FROM BRD
+
+WHERE
+  BRD_ID = 
+`;
+
+
+
+export let strSpeciesSightingSQL: string =  `
+SPECIES_SIGHTING_ID
+TRIP_ID
+SPECIES_ID
+SIGHTING_DATE
+SIGHTING_LATITUDE
+SIGHTING_LONGITUDE
+SPECIES_MIN_NUMBER
+SPECIES_MAX_NUMBER
+SPECIES_BEST_NUMBER
+APPROACH_DISTANCE
+APPROACH_DISTANCE_UM
+CONFIDENCE
+BODY_LENGTH
+SIGHTING_CONDITION
+BEAUFORT_VALUE
+WATER_TEMPERATURE
+WATER_TEMPERATURE_UM
+NOTES
+CREATED_BY
+CREATED_DATE
+MODIFIED_BY
+MODIFIED_DATE
+FISHING_ACTIVITY_ID
+RECORD_COMPUTER_LOAD_ON_DATE
+RECORD_LAST_EDITED_ON_DATE
+DATA_SOURCE
+INTERACTION_OUTCOME
+INTERACTION_BEHAVIORS
+
+FROM SPECIES_SIGHTING
+
+WHERE
+  SPECIES_SIGHTING_ID = 
+`;
+
+
+
+export let strSpeciesItems: string = `
+SPECIES_COMPOSITION_ID
+CATCH_ID
+SAMPLE_METHOD
+NOTES
+CREATED_BY
+CREATED_DATE
+MODIFIED_BY
+MODIFIED_DATE
+SPECIES_WEIGHT_KP
+SPECIES_NUMBER_KP
+BASKET_NUMBER
+DATA_QUALITY
+RECORD_COMPUTER_LOAD_ON_DATE
+RECORD_LAST_EDITED_ON_DATE
+DATA_SOURCE
+
+
+
+SPECIES_COMP_ITEM_ID
+SPECIES_ID
+SPECIES_COMPOSITION_ID
+SPECIES_WEIGHT
+SPECIES_WEIGHT_UM
+SPECIES_NUMBER
+NOTES
+DISCARD_REASON
+CREATED_BY
+CREATED_DATE
+MODIFIED_BY
+MODIFIED_DATE
+HANDLING
+TOTAL_TALLY
+SPECIES_WEIGHT_KP_ITQ
+SPECIES_NUMBER_KP_ITQ
+RECORD_COMPUTER_LOAD_ON_DATE
+RECORD_LAST_EDITED_ON_DATE
+DATA_SOURCE
+
+
+
+`
+
+
