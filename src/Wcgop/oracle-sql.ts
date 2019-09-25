@@ -5,10 +5,13 @@
 // The order in which fields are listed in these SQL queries matter
 // If a change is made to any of these following SQL queries, a respective change must
 // be made to the Build/Construct functions. 
-export function AllNewTripsSQL(strDateBegin: string, strDateEnd: string){
+export function AllNewTripsSQL(strDateBegin: string, strDateEnd: string) {
   return `
-    SELECT TRIPS.TRIP_ID 
-    FROM OBSPROD.TRIPS 
+    SELECT 
+      TRIPS.TRIP_ID 
+    FROM 
+      OBSPROD.TRIPS 
+
     WHERE 
       (
         (TRIPS.CREATED_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS')) AND
@@ -19,51 +22,52 @@ export function AllNewTripsSQL(strDateBegin: string, strDateEnd: string){
     `;
 }
 
-export function TripTableSQL(strDateBegin: string, strDateEnd: string){
-  return `SELECT 
+export function TripTableSQL(strDateBegin: string, strDateEnd: string) {
+  return `
+  SELECT 
 
-  TRIP_ID,
-  VESSEL_ID,
-  USER_ID,
-  PROGRAM_ID,
-  DEBRIEFING_ID,
-  TRIP_STATUS,
-  DEPARTURE_PORT_ID,
-  DEPARTURE_DATE,
-  RETURN_PORT_ID,
-  RETURN_DATE,
-  LOGBOOK_NUMBER,
-  NOTES,
-  DATA_QUALITY,
-  CREATED_BY,
-  CREATED_DATE,
-  MODIFIED_BY,
-  RECORD_LAST_EDITED_ON_DATE,
-  OTC_KP,
-  TOTAL_HOOKS_KP,
-  OBSERVER_LOGBOOK,
-  EVALUATION_ID,
-  PARTIAL_TRIP,
-  SKIPPER_ID,
-  FISHERY,
-  CREW_SIZE,
-  PERMIT_NUMBER,
-  LICENSE_NUMBER,
-  LOGBOOK_TYPE,
-  FIRST_RECEIVER,
-  EXPORT,
-  EXTERNAL_TRIP_ID,
-  DO_EXPAND,
-  RUN_TER,
-  DATA_SOURCE,
-  FISH_PROCESSED,
-  NO_FISHING_ACTIVITY,
-  INTENDED_GEAR_TYPE,
-  TOTAL_FISHING_DAYS, 
-  MODIFIED_DATE,
-  RECORD_LAST_EDITED_BY_USER,
-  RECORD_COMPUTER_LOAD_ON_DATE
-  
+    TRIP_ID,
+    VESSEL_ID,
+    USER_ID,
+    PROGRAM_ID,
+    DEBRIEFING_ID,
+    TRIP_STATUS,
+    DEPARTURE_PORT_ID,
+    DEPARTURE_DATE,
+    RETURN_PORT_ID,
+    RETURN_DATE,
+    LOGBOOK_NUMBER,
+    NOTES,
+    DATA_QUALITY,
+    CREATED_BY,
+    CREATED_DATE,
+    MODIFIED_BY,
+    RECORD_LAST_EDITED_ON_DATE,
+    OTC_KP,
+    TOTAL_HOOKS_KP,
+    OBSERVER_LOGBOOK,
+    EVALUATION_ID,
+    PARTIAL_TRIP,
+    SKIPPER_ID,
+    FISHERY,
+    CREW_SIZE,
+    PERMIT_NUMBER,
+    LICENSE_NUMBER,
+    LOGBOOK_TYPE,
+    FIRST_RECEIVER,
+    EXPORT,
+    EXTERNAL_TRIP_ID,
+    DO_EXPAND,
+    RUN_TER,
+    DATA_SOURCE,
+    FISH_PROCESSED,
+    NO_FISHING_ACTIVITY,
+    INTENDED_GEAR_TYPE,
+    TOTAL_FISHING_DAYS, 
+    MODIFIED_DATE,
+    RECORD_LAST_EDITED_BY_USER,
+    RECORD_COMPUTER_LOAD_ON_DATE
+    
   FROM OBSPROD.TRIPS
   
   WHERE 
@@ -82,7 +86,7 @@ export function TripTableSQL(strDateBegin: string, strDateEnd: string){
       `;
 }
 
-export function NewLookups(strDateBegin: string, strDateEnd: string, strLookupType: string){
+export function NewLookups(strDateBegin: string, strDateEnd: string, strLookupType: string) {
   return `
     SELECT 
     LOOKUP_ID,
@@ -113,7 +117,7 @@ export function NewLookups(strDateBegin: string, strDateEnd: string, strLookupTy
     `;
 }
 
-export function AllModifiedTripsSQL(strDateBegin: string, strDateEnd: string){
+export function AllModifiedTripsSQL(strDateBegin: string, strDateEnd: string) {
   return `
   SELECT TRIPS.TRIP_ID 
   FROM OBSPROD.TRIPS 
@@ -126,7 +130,7 @@ export function AllModifiedTripsSQL(strDateBegin: string, strDateEnd: string){
     `;
 }
 
-export function AllNewAndModifiedHauls(strDateBegin: string, strDateEnd: string){
+export function AllNewAndModifiedHauls(strDateBegin: string, strDateEnd: string) {
   return `
     SELECT DISTINCT
       FISHING_ACTIVITIES.TRIP_ID,
@@ -277,7 +281,7 @@ export function AllNewAndModifiedHauls(strDateBegin: string, strDateEnd: string)
       `;
 }
 
-export function AllNewAndModifiedLookups(strTableID: string, strTableName: string, strDateBegin: string, strDateEnd: string){
+export function AllNewAndModifiedLookups(strTableID: string, strTableName: string, strDateBegin: string, strDateEnd: string) {
   return `
     SELECT `+ strTableID + ` 
     FROM OBSPROD.` + strTableName + ` 
@@ -300,7 +304,7 @@ export function AllNewAndModifiedLookups(strTableID: string, strTableName: strin
 
 }
 
-export function DissectionsTableSQL(strDateBegin: string, strDateEnd: string){
+export function DissectionsTableSQL(strDateBegin: string, strDateEnd: string) {
   return `
   SELECT DISTINCT
 
@@ -473,7 +477,7 @@ export function DissectionsTableSQL(strDateBegin: string, strDateEnd: string){
       `;
 }
 
-export function BioSpecimenItemsTableSQL(strDateBegin: string, strDateEnd: string){
+export function BioSpecimenItemsTableSQL(strDateBegin: string, strDateEnd: string) {
   return `
   SELECT DISTINCT
 
@@ -642,7 +646,7 @@ export function BioSpecimenItemsTableSQL(strDateBegin: string, strDateEnd: strin
       `;
 }
 
-export function BioSpecimensTableSQL(strDateBegin: string, strDateEnd: string){
+export function BioSpecimensTableSQL(strDateBegin: string, strDateEnd: string) {
   return `
     SELECT DISTINCT
 
@@ -807,7 +811,7 @@ export function BioSpecimensTableSQL(strDateBegin: string, strDateEnd: string){
       `;
 }
 
-export function LengthFrequenciesTableSQL(strDateBegin: string, strDateEnd: string){
+export function LengthFrequenciesTableSQL(strDateBegin: string, strDateEnd: string) {
   return `
     SELECT DISTINCT
 
@@ -969,7 +973,7 @@ export function LengthFrequenciesTableSQL(strDateBegin: string, strDateEnd: stri
       `;
 }
 
-export function SpeciesCompositionsAndItemsTableSQL(strDateBegin: string, strDateEnd: string){
+export function SpeciesCompositionsAndItemsTableSQL(strDateBegin: string, strDateEnd: string) {
   return `
     SELECT DISTINCT
 
@@ -1151,7 +1155,7 @@ export function SpeciesCompositionsAndItemsTableSQL(strDateBegin: string, strDat
       `;
 }
 
-export function CatchesTableSQL(strDateBegin: string, strDateEnd: string){
+export function CatchesTableSQL(strDateBegin: string, strDateEnd: string) {
   return `
     SELECT DISTINCT
 
@@ -1336,7 +1340,7 @@ CATCHES.RECORD_LAST_EDITED_BY_USER
   `;
 }
 
-export function HaulsTableSQL(strDateBegin: string, strDateEnd: string){
+export function HaulsTableSQL(strDateBegin: string, strDateEnd: string) {
   return `
     SELECT DISTINCT
 
@@ -1521,7 +1525,7 @@ export function HaulsTableSQL(strDateBegin: string, strDateEnd: string){
   `;
 }
 
-export function HlfcTableSQL(){
+export function HlfcTableSQL() {
   return `
     SELECT DISTINCT
 
@@ -1557,7 +1561,7 @@ export function HlfcTableSQL(){
     `;
 }
 
-export function SpeciesSightingsTableSQL(){
+export function SpeciesSightingsTableSQL() {
   return `SELECT
 
   SPECIES_SIGHTINGS.SPECIES_SIGHTING_ID,
@@ -1596,7 +1600,7 @@ export function SpeciesSightingsTableSQL(){
   `;
 }
 
-export function SpeciesInteractionsTableSQL(){
+export function SpeciesInteractionsTableSQL() {
   return `SELECT
 
   SPECIES_INTERACTIONS.SPECIES_INTERACTION_ID,
@@ -1617,7 +1621,7 @@ export function SpeciesInteractionsTableSQL(){
   `;
 }
 
-export function SpeciesInteractionHaulsXREFTableSQL(){
+export function SpeciesInteractionHaulsXREFTableSQL() {
   return `SELECT
 
   SPECIES_INTERACTION_HAULS_XREF.SI_HAUL_ID,
@@ -1632,7 +1636,7 @@ export function SpeciesInteractionHaulsXREFTableSQL(){
   `;
 }
 
-export function FishTicketsTableSQL(){
+export function FishTicketsTableSQL() {
 
   return `
   SELECT 
@@ -1657,7 +1661,7 @@ export function FishTicketsTableSQL(){
 
 }
 
-export function FishingLocationsTableSQL(){
+export function FishingLocationsTableSQL() {
   return `
   SELECT 
 
@@ -2171,7 +2175,7 @@ FROM OBSPROD.CATCH_CATEGORIES
 `
 
 
-  
+
 
 export var strContactSQL = `
 SELECT
@@ -2259,7 +2263,7 @@ WHERE
 
 
 
-export let strFishTicketSQL: string =  `
+export let strFishTicketSQL: string = `
 SELECT 
 
 FISH_TICKET_ID
@@ -2284,7 +2288,7 @@ WHERE
 
 
 
-export let strTripCertificateSQL: string =  `
+export let strTripCertificateSQL: string = `
 
 TRIP_CERTIFICATE_ID
 TRIP_ID
@@ -2305,7 +2309,7 @@ WHERE
 `;
 
 
-export let strHLFCSQL: string =  `
+export let strHLFCSQL: string = `
 SELECT
 HLFC_ID,
 TRIP_ID,
@@ -2339,7 +2343,7 @@ WHERE
 `;
 
 
-export let strBRDSQL: string =  `
+export let strBRDSQL: string = `
 BRD_ID
 TRIP_ID
 FISHING_ACTIVITY_ID
@@ -2361,7 +2365,7 @@ WHERE
 
 
 
-export let strSpeciesSightingSQL: string =  `
+export let strSpeciesSightingSQL: string = `
 SPECIES_SIGHTING_ID
 TRIP_ID
 SPECIES_ID

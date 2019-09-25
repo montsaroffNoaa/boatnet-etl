@@ -5,16 +5,16 @@
 //     console.log("asd")
 //     let strSQL = `SELECT FISHING_ACTIVITIES.FISHING_ACTIVITY_ID, FISHING_ACTIVITIES.TRIP_ID, FISHING_ACTIVITIES.FISHING_ACTIVITY_NUM, FISHING_ACTIVITIES.OBSERVER_TOTAL_CATCH, FISHING_ACTIVITIES.OTC_WEIGHT_UM, FISHING_ACTIVITIES.OTC_WEIGHT_METHOD FROM OBSPROD.FISHING_ACTIVITIES`;
 //     let lstHaulData = await ExecuteOracleSQL(odb, strSQL);
-  
+
 //     for(let i = 0; i < lstHaulData.length; i++){
 //       let Document: any;
 //       let strDocID, strDocRev;
-  
+
 //       strSQL = `SELECT COUNT(*) FROM OBSPROD.CATCHES WHERE CATCHES.FISHING_ACTIVITY_ID = ` + lstHaulData[i][0];
 //       let CatchNum = await ExecuteOracleSQL(odb, strSQL);
 //       CatchNum = CatchNum[0][0];
 //       try {
-        
+
 //         [strDocID, strDocRev, Document] = await FetchDocument("haul_id", lstHaulData[i][0]);
 //         if (strDocID == null){
 //           console.log("Error: Document does not exist. haul_id = " + lstHaulData[i][0]);
@@ -45,7 +45,7 @@
 //     let odb = await OracleConnection();
 //     let strSQL = `SELECT TRIPS.TRIP_ID, COUNT(FISHING_ACTIVITIES.TRIP_ID) FROM OBSPROD.TRIPS LEFT JOIN OBSPROD.FISHING_ACTIVITIES ON TRIPS.TRIP_ID = FISHING_ACTIVITIES.TRIP_ID GROUP BY TRIPS.TRIP_ID`;
 //     let strRawTripIDs = await ExecuteOracleSQL(odb, strSQL);
-      
+
 //     for(let i = 0; i < strRawTripIDs.length; i++){
 //       let strDocID, strDocRev, Document: any;
 //       [strDocID, strDocRev, Document] = await FetchDocument("trip_id", strRawTripIDs[i][0]);
@@ -78,7 +78,7 @@
 //     await ReleaseOracle(odb);
 //   }
 //   async function TestContact(){
-      
+
 //     let odb = await OracleConnection();
 //     let strSQL = `SELECT
 //   CONTACT_ID,
@@ -110,10 +110,10 @@
 //   BIRTHDATE,
 //   LICENSE_NUMBER,
 //   EPIRB_UIN_2
-  
-      
+
+
 //   FROM OBSPROD.CONTACTS`
-  
+
 //     let ContactData = await ExecuteOracleSQL(odb, strSQL);
 //     await ReleaseOracle(odb);
 //     for(let i = 0; i < ContactData.length; i++){
@@ -166,15 +166,15 @@
 //       } else if (Document.epirb_uin_2 != ContactData[i][28]){
 //         console.log("Error: Contact data does not line up, epirb_uin_2. " + ContactData[i][0]);
 //       } 
-      
-      
-      
-      
+
+
+
+
 //     }	
 //   }
 //   async function TestPort(){
-      
-      
+
+
 //     let odb = await OracleConnection();
 //     let strSQL = `
 //   SELECT
@@ -189,9 +189,9 @@
 //   MODIFIED_DATE,
 //   IFQ_PORT_ID,
 //   IFQ_PORT_CODE
-  
+
 //   FROM OBSPROD.PORTS`
-  
+
 //     let PortData = await ExecuteOracleSQL(odb, strSQL);
 //     await ReleaseOracle(odb);
 //     for(let i = 0; i < PortData.length; i++){
@@ -215,8 +215,8 @@
 //     }	  
 //   }
 //   async function TestProgram(){
-      
-      
+
+
 //     let odb = await OracleConnection();
 //     let strSQL = `
 //   SELECT
@@ -227,9 +227,9 @@
 //   CREATED_DATE,
 //   MODIFIED_BY,
 //   MODIFIED_DATE
-    
+
 //   FROM OBSPROD.PROGRAMS`
-  
+
 //     let ProgramData = await ExecuteOracleSQL(odb, strSQL);
 //     await ReleaseOracle(odb);
 //     for(let i = 0; i < ProgramData.length; i++){
@@ -245,8 +245,8 @@
 //     }	  
 //   }
 //   async function TestUser(){
-      
-      
+
+
 //     let odb = await OracleConnection();
 //     let strSQL = `
 //   SELECT
@@ -254,9 +254,9 @@
 //   FIRST_NAME,
 //   LAST_NAME,
 //   STATUS
-    
+
 //   FROM OBSPROD.USERS`
-  
+
 //     let UserData = await ExecuteOracleSQL(odb, strSQL);
 //     await ReleaseOracle(odb);
 //     for(let i = 0; i < UserData.length; i++){
@@ -274,7 +274,7 @@
 //     }	  
 //   }
 //   async function TestCatchCategory(){
-      
+
 //     let odb = await OracleConnection();
 //     let strSQL = `SELECT
 //   CATCH_CATEGORY_ID,
@@ -283,9 +283,9 @@
 //   CREATED_BY,
 //   MODIFIED_BY,
 //   ACTIVE
-      
+
 //   FROM OBSPROD.CATCH_CATEGORIES`
-  
+
 //     let CatchCatData = await ExecuteOracleSQL(odb, strSQL);
 //     await ReleaseOracle(odb);
 //     for(let i = 0; i < CatchCatData.length; i++){
@@ -303,8 +303,8 @@
 //     }	
 //   }
 //   async function TestVessel(){
-      
-      
+
+
 //     let odb = await OracleConnection();
 //     let strSQL = `
 //   SELECT
@@ -323,9 +323,9 @@
 //   CREATED_DATE,
 //   MODIFIED_BY,
 //   MODIFIED_DATE
-    
+
 //   FROM OBSPROD.VESSELS`
-  
+
 //     let VesselData = await ExecuteOracleSQL(odb, strSQL);
 //     await ReleaseOracle(odb);
 //     for(let i = 0; i < VesselData.length; i++){
@@ -353,8 +353,8 @@
 //     }	  
 //   }
 //   async function TestVesselContact(){
-      
-      
+
+
 //     let odb = await OracleConnection();
 //     let strSQL = `
 //     SELECT
@@ -367,9 +367,9 @@
 //     CREATED_DATE,
 //     MODIFIED_BY,
 //     MODIFIED_DATE
-    
+
 //   FROM OBSPROD.VESSEL_CONTACTS`
-  
+
 //     let VesselContactData = await ExecuteOracleSQL(odb, strSQL);
 //     await ReleaseOracle(odb);
 //     for(let i = 0; i < VesselContactData.length; i++){
@@ -394,7 +394,6 @@
 //     TestProgram();
 //     TestUser();
 //     TestCatchCategory();
-    
+
 //     //await TestLookupDocs("LOOKUPS", "LOOKUP_ID", "lookup_id")
 //   }
-  

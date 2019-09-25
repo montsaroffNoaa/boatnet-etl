@@ -16,7 +16,7 @@
 //   ifq_port_id: number;
 //   ifq_port_code: number;
 // }
-  
+
 // export function ConstructPortWCGOP(PortData: any, CreatedBy: UserWCGOP, ModifiedBy: UserWCGOP){
 //     let NewPort: Port = {
 //       type: 'Port',

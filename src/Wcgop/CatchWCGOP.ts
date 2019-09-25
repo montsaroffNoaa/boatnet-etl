@@ -42,10 +42,10 @@
 
 
 //   }
-  
+
 
 //   export function ConstructCatchWCGOP(CatchData: any, CatchCat: CatchCategory, CreatedBy: UserWCGOP, ModifiedBy: UserWCGOP) {
-      
+
 //     let NewCatch: CatchWCGOP = {
 //       type: 'Catch',
 //       catch_id: CatchData[0],
@@ -86,7 +86,7 @@
 //       addl_basket_weight_kp: CatchData[35],
 //       basket_weight_count_kp: CatchData[36],
 //       data_source: CatchData[37]
-      
+
 //   }
 //     return NewCatch;
 //   }

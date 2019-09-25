@@ -1,213 +1,76 @@
-
-import * as dbconnections from './../../dbconnections'
-import { Taxonomy } from '../libs/bn-models';
-import { TaxonomyAlias, Port, Vessel } from '../libs/bn-models/dist';
-
-export var UploadedBy = 'nicholas.shaffer@noaa.gov';
-export var UploadedDate: any;
-
-
-var oracledb = require('oracledb');
 var moment = require('moment');
-const { Pool, Client } = require('pg')
 import * as WebRequest from 'web-request';
-import { PacfinSpeciesETL, getPacfinSpeciesTable } from './query-pacfin-species';
-import { TaxonomyAliasETL } from '../TaxonomyAliases';
-import { CatchGroupingsETL } from '../CatchGroupings';
-
-// Couch Connection
-var CouchDBName: string = dbconnections['CouchDBName']
-var CouchHost: string = dbconnections['CouchHost']
-var CouchPass: string = dbconnections['CouchPass']
-var CouchPort: string = dbconnections['CouchPort']
-var CouchUser: string = dbconnections['CouchUser']
-
-// Data Warehouse Connection
-var DWHost: string = dbconnections['DWHost']
-var DWPort: string = dbconnections['DWPort']
-var DWUser: string = dbconnections['DWUser']
-var DWPass: string = dbconnections['DWPass']
-var DWInitialDB: string = dbconnections['DWInitialDB']
-
-
-// ASHOP Connection
-var NorpacServiceName: string = dbconnections['NorpacServiceName']
-var NorpacHost: string = dbconnections['NorpacHost']
-var NorpacPass: string = dbconnections['NorpacPass']
-var NorpacPort: string = dbconnections['NorpacPort']
-var NorpacUser: string = dbconnections['NorpacUser']
-var strNorpacConnection: string = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=" + NorpacHost + ")(PORT=" + NorpacPort + "))(CONNECT_DATA =(SERVICE_NAME=" + NorpacServiceName + ")))"
-
-// WCGOP Connection
-var IFQServiceName: string = dbconnections['IFQServiceName']
-var IFQHost: string = dbconnections['IFQHost']
-var IFQPass: string = dbconnections['IFQPass']
-var IFQPort: string = dbconnections['IFQPort']
-var IFQUser: string = dbconnections['IFQUser']
-var strIFQConnection: string = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=" + IFQHost + ")(PORT=" + IFQPort + "))(CONNECT_DATA =(SERVICE_NAME=" + IFQServiceName + ")))"
-
-// Create connection to Couch to last entire runtime of application
-var couchurl: string = "https://" + CouchUser + ":" + CouchPass + "@" + CouchHost + ":" + CouchPort
-const couchDB = require('nano')({
-  url: couchurl,
-  requestDefaults: {
-    pool: {
-      maxSockets: Infinity
-    }
-  }
-});
-
-var dbName = couchDB.use(CouchDBName);
+import { PacfinSpeciesETL } from './query-pacfin-species';
+import { TaxonomyAliasETL } from './taxonomy-alias-etl';
+import { CatchGroupingsETL } from '../CatchGroupings/catch-groupings-etl';
+import { dbName } from '../Common/db-connection-variables';
+import { Taxonomy } from '../../../boatnet/libs/bn-models/models';
+import { ReplaceAll, InsertBulkCouchDB, ReleasePostgres, GenerateCouchID, WarehouseConnectionClient, sleep } from '../Common/common-functions';
 
 // Setting this process var to "0" is extremely unsafe in most situations, use with care.
 // It is unsafe because Node does not like self signed TLS (SSL) certificates, 
 // this setting disables Node's rejection of invalid or unauthorized certificates, and allows them.
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
-console.log('CouchDB connection configured successfully.');
-
-
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+// console.log('CouchDB connection configured successfully.');
 
 var dictTaxLevels: { [id: string]: any; } = {};
 var dictTaxonomyByItisID: { [id: number]: any; } = {};
 var dictDwTaxLevelNames: { [id: string]: any; } = {};
 
+function FillLocalDictionaries() {
 
-dictTaxLevels['Kingdom'] = 0
-dictTaxLevels['Subkingdom'] = 1
-dictTaxLevels['Infrakingdom'] = 2
-dictTaxLevels['Superphylum'] = 3
-dictTaxLevels['Phylum'] = 4
-dictTaxLevels['Subphylum'] = 5
-dictTaxLevels['Infraphylum'] = 6
-dictTaxLevels['Superclass'] = 7
-dictTaxLevels['Class'] = 8
-dictTaxLevels['Subclass'] = 9
-dictTaxLevels['Infraclass'] = 10
-dictTaxLevels['Superorder'] = 11
-dictTaxLevels['Order'] = 12
-dictTaxLevels['Suborder'] = 13
-dictTaxLevels['Infraorder'] = 14
-dictTaxLevels['Section'] = 15
-dictTaxLevels['Superfamily'] = 16
-dictTaxLevels['Family'] = 17
-dictTaxLevels['Subfamily'] = 18
-dictTaxLevels['Tribe'] = 19
-dictTaxLevels['Genus'] = 20
-dictTaxLevels['Subgenus'] = 21
-dictTaxLevels['Species'] = 22
-dictTaxLevels['Subspecies'] = 23
-dictTaxLevels['Variety'] = 24
-
-
-dictDwTaxLevelNames['superclass'] = 'superclass_28'
-dictDwTaxLevelNames['order'] = 'order_40'
-dictDwTaxLevelNames['family'] = 'family_50'
-dictDwTaxLevelNames['kingdom'] = 'kingdom_10'
-dictDwTaxLevelNames['subphylum'] = 'subphylum_22'
-dictDwTaxLevelNames['infraclass'] = 'infraclass_34'
-dictDwTaxLevelNames['subspecies'] = 'subspecies_82'
-dictDwTaxLevelNames['subfamily'] = 'subfamily_52'
-dictDwTaxLevelNames['phylum'] = 'phylum_20'
-dictDwTaxLevelNames['genus'] = 'genus_70'
-dictDwTaxLevelNames['infraorder'] = 'infraorder_44'
-dictDwTaxLevelNames['class'] = 'class_30'
-dictDwTaxLevelNames['species'] = 'species_80'
-dictDwTaxLevelNames['superfamily'] = 'superfamily_48'
-dictDwTaxLevelNames['suborder'] = 'suborder_42'
-dictDwTaxLevelNames['tribe'] = 'tribe_60'
-dictDwTaxLevelNames['superorder'] = 'superorder_38'
-dictDwTaxLevelNames['subclass'] = 'subclass_32'
+  dictTaxLevels['Kingdom'] = 0
+  dictTaxLevels['Subkingdom'] = 1
+  dictTaxLevels['Infrakingdom'] = 2
+  dictTaxLevels['Superphylum'] = 3
+  dictTaxLevels['Phylum'] = 4
+  dictTaxLevels['Subphylum'] = 5
+  dictTaxLevels['Infraphylum'] = 6
+  dictTaxLevels['Superclass'] = 7
+  dictTaxLevels['Class'] = 8
+  dictTaxLevels['Subclass'] = 9
+  dictTaxLevels['Infraclass'] = 10
+  dictTaxLevels['Superorder'] = 11
+  dictTaxLevels['Order'] = 12
+  dictTaxLevels['Suborder'] = 13
+  dictTaxLevels['Infraorder'] = 14
+  dictTaxLevels['Section'] = 15
+  dictTaxLevels['Superfamily'] = 16
+  dictTaxLevels['Family'] = 17
+  dictTaxLevels['Subfamily'] = 18
+  dictTaxLevels['Tribe'] = 19
+  dictTaxLevels['Genus'] = 20
+  dictTaxLevels['Subgenus'] = 21
+  dictTaxLevels['Species'] = 22
+  dictTaxLevels['Subspecies'] = 23
+  dictTaxLevels['Variety'] = 24
 
 
-export async function WarehouseConnection() {
-  const client = new Client({
-    user: DWUser,
-    host: DWHost,
-    database: DWInitialDB,
-    password: DWPass,
-    port: DWPort,
-  })
-  client.connect()
-  return client
+  dictDwTaxLevelNames['superclass'] = 'superclass_28'
+  dictDwTaxLevelNames['order'] = 'order_40'
+  dictDwTaxLevelNames['family'] = 'family_50'
+  dictDwTaxLevelNames['kingdom'] = 'kingdom_10'
+  dictDwTaxLevelNames['subphylum'] = 'subphylum_22'
+  dictDwTaxLevelNames['infraclass'] = 'infraclass_34'
+  dictDwTaxLevelNames['subspecies'] = 'subspecies_82'
+  dictDwTaxLevelNames['subfamily'] = 'subfamily_52'
+  dictDwTaxLevelNames['phylum'] = 'phylum_20'
+  dictDwTaxLevelNames['genus'] = 'genus_70'
+  dictDwTaxLevelNames['infraorder'] = 'infraorder_44'
+  dictDwTaxLevelNames['class'] = 'class_30'
+  dictDwTaxLevelNames['species'] = 'species_80'
+  dictDwTaxLevelNames['superfamily'] = 'superfamily_48'
+  dictDwTaxLevelNames['suborder'] = 'suborder_42'
+  dictDwTaxLevelNames['tribe'] = 'tribe_60'
+  dictDwTaxLevelNames['superorder'] = 'superorder_38'
+  dictDwTaxLevelNames['subclass'] = 'subclass_32'
 }
-export async function ReleasePostgres(client: any) {
-  client.end()
-}
-async function AshopConnection() {
-  let odb = await oracledb.getConnection(
-    {
-      user: NorpacUser,
-      password: NorpacPass,
-      connectString: strNorpacConnection
-    }
-  ).catch((error: any) => {
-    console.log("oracle connection failed", error);
-  });
-  return odb
-}
-export async function WcgopConnection() {
-  let odb = await oracledb.getConnection(
-    {
-      user: IFQUser,
-      password: IFQPass,
-      connectString: strIFQConnection
-    }
-  ).catch((error: any) => {
-    console.log("oracle connection failed", error);
-  });
-  return odb
-}
-export async function ReleaseOracle(connection: any) {
-  await connection.close(
-    function (err: Error) {
-      if (err)
-        console.error(err.message);
-      else
-        console.log('Oracle released successfully.')
-    });
-}
-async function ExecuteOracleSQL(dbconnection: any, strSQL: string) {
-  let aData = await dbconnection.execute(strSQL).catch((error: any) => {
-    console.log("oracle query failed", error, strSQL);
-  });
-  if (aData) {
-    return aData.rows;
-  } else {
-    return null;
-  }
-}
-async function UpdateDocCouchDB(UpdatedDoc: any) {
-  const dbName = couchDB.use(CouchDBName);
-  await dbName.insert(UpdatedDoc).then((data: any) => {
-    //console.log(data)
-  }).catch((error: any) => {
-    console.log("update failed", error, UpdatedDoc);
 
-  });
-
-}
-export async function InsertBulkCouchDB(lstDocuments: any) {
-  let lstDocumentIDs: string[];
-  lstDocumentIDs = [];
-  const dbName = couchDB.use(CouchDBName);
-
-  await dbName.bulk({ docs: lstDocuments }).then((lstReturn: any) => {
-    //console.log(lstReturn);
-    for (let i = 0; i < lstReturn.length; i++) {
-      lstDocumentIDs.push(lstReturn[i].id)
-    }
-  }).catch((error: any) => {
-    console.log("bulk insert failed", error, lstDocuments);
-  });
-
-  return lstDocumentIDs;
-}
 async function FetchAllDocs(Key: number | string, ViewName: string, DesignName: string) {
   let strDocID;
   let strDocRev;
   let Document;
   let AllDocs: any[] = [];
-  const dbName = couchDB.use(CouchDBName);
 
   await dbName.view(DesignName, ViewName, {
     'key': Key,
@@ -232,8 +95,6 @@ async function FetchAllDocs(Key: number | string, ViewName: string, DesignName: 
 
 async function CreateViews() {
 
-
-  const dbName = couchDB.use(CouchDBName);
   let LookupDocs: any = {
     "_id": "_design/Taxonomy",
     "views": {
@@ -251,24 +112,24 @@ async function CreateViews() {
       },
       "all-taxonomy-aliases": {
         "map": "function (doc) {\r\n  if (doc.type == 'taxonomy-alias') { \r\n    emit(doc.alias, null);\r\n  }\r\n}"
-      }, 
+      },
       "taxonomy-with-pacfin-code": {
         "map": "function (doc) {\r\n  if (doc.type == 'taxonomy') { \r\n    emit(doc.pacfinSpeciesCode, null);\r\n  }\r\n}"
-      }, 
+      },
       "taxonomy-by-scientific-name": {
         "map": "function (doc) {\r\n  if (doc.type == 'taxonomy') { \r\n    emit(doc.scientificName, null);\r\n  }\r\n}"
-      },  
+      },
       "taxonomy-alias-by-taxonomy-id": {
         "map": "function (doc) {\r\n  if (doc.type == 'taxonomy-alias') { \r\n    emit(doc.taxonomy._id, null);\r\n  }\r\n}"
-      },  
+      },
       "taxonomy-by-wcgop-id": {
         "map": "function (doc) {\r\n  if (doc.type == 'taxonomy' && doc.legacy.wcgopSpeciesId) { \r\n    emit(doc.legacy.wcgopSpeciesId, null);\r\n  }\r\n}"
-      },  
+      },
       "taxonomy-alias-scientific-name-by-taxonomy-id": {
         "map": "function (doc) {\r\n  if (doc.type == 'taxonomy-alias' && doc.aliasType == 'scientific name') { \r\n    emit(doc.taxonomy._id, null);\r\n  }\r\n}"
       }
 
-      
+
 
     },
     "language": "javascript"
@@ -287,95 +148,6 @@ async function CreateViews() {
     console.log("update failed", error, LookupDocs);
   });
 
-}
-
-export async function GenerateCouchID() {
-
-  const dbName = couchDB.use(CouchDBName);
-  let CouchID: string;
-
-  await couchDB.uuids(1).then((data: any) => {
-    //console.log(data);
-    CouchID = data.uuids[0]
-  });
-
-  return CouchID;
-}
-
-async function GenerateCouchIDs(iNumToGenerate: number) {
-
-  const dbName = couchDB.use(CouchDBName);
-  let CouchIDs: string[];
-
-  await couchDB.uuids(iNumToGenerate).then((data: any) => {
-    //console.log(data);
-    CouchIDs = data.uuids
-  });
-
-  return CouchIDs;
-}
-
-function RemoveDocNullVals(Document: any) {
-
-  // setting property to undefined instead of deleting is much faster, and adequate for the purpose of migrating to couch
-  for (let item in Document) {
-    if (Document[item] == null) {
-      //delete Document[item];
-      Document[item] = undefined;
-    } else if (typeof (Document[item]) === 'object') {
-      let subdoc = RemoveDocNullVals(Document[item]);
-      Document[item] = subdoc;
-    } else if (typeof (Document[item]) === 'string') {
-      if (!Document[item].replace(/\s/g, '').length) {
-        // string only contains whitespace
-        Document[item] = undefined;
-      }
-    }
-  }
-
-  return Document;
-}
-
-async function BuildTaxonomy(objTaxRecord: any) {
-
-  let strCouchID = await GenerateCouchID();
-  let docNewTax: Taxonomy = {
-    _id: strCouchID,
-    type: 'taxonomy',
-    taxonomyId: strCouchID,
-    level: objTaxRecord.scientific_name_taxonomic_level,
-    taxonomyName: objTaxRecord.species_80,
-    scientificName: objTaxRecord.species_80,
-    parent: 'n/a',
-    // wcgopTallyShortCode: null,
-    // pacfinNomCode: objTaxRecord.pacfin_nom_spid,
-    itisTSN: objTaxRecord.itis_taxonomic_serial_no,
-    wormsAphiaId: objTaxRecord.worms_aphiaid,
-    isInactive: null,
-
-    legacy: {
-      wcgopSpeciesId: objTaxRecord.observer_species_id,
-      ashopSpeciesId: objTaxRecord.norpac_species_id,
-      dwId: [objTaxRecord.taxonomy_whid]
-    }
-
-  }
-
-  strCouchID = await GenerateCouchID();
-  let docNewAlias: TaxonomyAlias = {
-    _id: strCouchID,
-    type: 'taxonomy-alias',
-    taxonomy: docNewTax,
-    alias: objTaxRecord.common_name,
-    aliasType: 'Common Name'
-  }
-
-
-  return [docNewTax, docNewAlias];
-
-}
-export function ReplaceAll(str: string, find: string, replace: string) {
-  return str.replace(new RegExp(find, 'g'), replace);
 }
 
 async function CleanItisString(strItisData: string) {
@@ -552,7 +324,6 @@ async function GetAcceptedTsns(strTsn: string) {
 
 async function MapTaxChildren() {
 
-  const dbName = couchDB.use(CouchDBName);
   let lstAllTaxDocs: Taxonomy[] = [];
   let lstUpdatedDocs: Taxonomy[] = [];
 
@@ -593,7 +364,6 @@ async function MapTaxChildren() {
 
 async function vTestViews() {
 
-  const dbName = couchDB.use(CouchDBName);
   let lstDocs: any = [];
 
   await dbName.view('Taxonomy', 'taxonomy-by-itisTSN', {
@@ -618,10 +388,9 @@ async function vTestViews() {
   console.log(lstDocs.length);
 }
 
-
 async function BeginAsynchETL() {
   await CreateViews();
-  let client = await WarehouseConnection();
+  let client = await WarehouseConnectionClient();
   let lstWarehouseTaxonomy = await client.query('SELECT * FROM dw.taxonomy_dim WHERE scientific_name IS NOT NULL ORDER BY taxonomy_whid');
   lstWarehouseTaxonomy = lstWarehouseTaxonomy.rows;
   await ReleasePostgres(client);
@@ -631,17 +400,13 @@ async function BeginAsynchETL() {
   for (let i = 0; i < lstWarehouseTaxonomy.length; i++) {
     let objDWdata: any = lstWarehouseTaxonomy[i];
     // if(objDWdata.taxonomy_whid == 7247){
-    await Sleep(1000);
+    await sleep(1000);
     getItisDataAsynchonously(objDWdata).catch((error: any) => {
       console.log(error);
     });
     // }
   }
   return 1;
-}
-
-function Sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function getItisDataAsynchonously(objDWdata: any) {
@@ -801,10 +566,8 @@ async function getItisDataAsynchonously(objDWdata: any) {
   }
 }
 
-
 async function FlattenTaxonomyDocs() {
 
-  const dbName = couchDB.use(CouchDBName);
   let uniqueLevels: string[] = [];
   let allTaxDocs: Taxonomy[] = [];
 
@@ -904,7 +667,6 @@ async function FlattenTaxonomyDocs() {
 
 async function getAllUniqueLevels() {
 
-  const dbName = couchDB.use(CouchDBName);
   let lstUniqueLevels: string[] = [];
   let lstAllTaxDocs: Taxonomy[] = [];
 
@@ -940,8 +702,7 @@ async function getAllUniqueLevels() {
 }
 
 async function getDwIDsForBadSearches() {
-  let client = await WarehouseConnection();
-  const dbName = couchDB.use(CouchDBName);
+  let client = await WarehouseConnectionClient();
   let dwTaxonomyData = await client.query('SELECT * FROM dw.taxonomy_dim WHERE scientific_name IS NOT NULL');
   dwTaxonomyData = dwTaxonomyData.rows;
   await ReleasePostgres(client);
@@ -1222,27 +983,25 @@ async function getObserverItemsNotInWarehouse() {
 }
 
 
-async function Initialize() {
+async function InitializeAllTaxonomyETL() {
   // overall this whole process takes a little over an hour
-
+  FillLocalDictionaries();
+  console.log(new Date().toLocaleTimeString(), ' Initializing full taxonomy ETL.');
+  await BeginAsynchETL(); // this step will take and hour  so, largest percentage of this entire process
+  console.log(new Date().toLocaleTimeString(), ' Finished warehouse ETL, getting missing observer items.');
+  await addMissingObserverIDs();
+  await getObserverItemsNotInWarehouse();
+  console.log(new Date().toLocaleTimeString(), ' Finished incorporating missing obvserver items, beginning incorporation of pacfin species.');
+  await PacfinSpeciesETL();
+  console.log(new Date().toLocaleTimeString(), ' Finished pacfin incorporation, beginning parent/child mapping of taxonomy hierarchies.');
+  await MapTaxChildren();
+  console.log(new Date().toLocaleTimeString(), ' Finished parent/child mapping, beginning ETL of aliases.');
+  await TaxonomyAliasETL();
+  console.log(new Date().toLocaleTimeString(), ' Finished ETL of aliases, beginning ETL of catch-groupings.');
   await CatchGroupingsETL();
-
-
-  // console.log()
-  // console.log(new Date().toLocaleTimeString(), ' Initializing full taxonomy ETL.'); 
-  // await BeginAsynchETL(); // this step will take and hour  so, largest percentage of this entire process
-  // console.log(new Date().toLocaleTimeString(), ' Finished warehouse ETL, getting missing observer items.');
-  // await addMissingObserverIDs();
-  // await getObserverItemsNotInWarehouse();
-  // console.log(new Date().toLocaleTimeString(), ' Finished incorporating missing obvserver items, beginning incorporation of pacfin species.');
-  // await PacfinSpeciesETL();
-  // console.log(new Date().toLocaleTimeString(), ' Finished pacfin incorporation, beginning parent/child mapping of taxonomy hierarchies.');
-  // await MapTaxChildren();
-  // console.log(new Date().toLocaleTimeString(), ' Finished parent/child mapping, beginning ETL of aliases.');
-  // await TaxonomyAliasETL();
-  // console.log(new Date().toLocaleTimeString(), ' Finished ETL of aliases, flattening taxonomy documents.');
-  // await FlattenTaxonomyDocs();
-  // console.log(new Date().toLocaleTimeString(), ' Finished taxonomy flattening, full ETL successful.');
+  console.log(new Date().toLocaleTimeString(), ' Finished ETL of catch-grpupings, flattening taxonomy documents.');
+  await FlattenTaxonomyDocs();
+  console.log(new Date().toLocaleTimeString(), ' Finished taxonomy flattening, full ETL successful.');
 }
 
 async function testSpecificInvalidNames() {
@@ -1271,26 +1030,14 @@ async function testSpecificInvalidNames() {
 
 }
 
+// random dev/test stuff
 // testSpecificInvalidNames();
-
-
 // lstGetAcceptedTsns('154451');
-
-
 // getAllUniqueLevels();
-
-
 // getDwIDsForBadSearches();
-
 // vTestViews();
-
-Initialize();
-
-
 // FlattenTaxonomyDocs();
-
-
-
-
-
 // lstGetFullHierarchy(['162635'], 'species', 'Lampanyctus ritteri')
+
+InitializeAllTaxonomyETL();
+

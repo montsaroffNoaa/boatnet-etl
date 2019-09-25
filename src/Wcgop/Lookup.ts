@@ -17,7 +17,7 @@
 //     modified_date: Date;
 
 // }
-  
+
 // export function ConstructLookup(LookupData: any, CreatedBy: UserWCGOP, ModifiedBy: UserWCGOP) {
 //   let NewLookup: Lookup = {
 //     type: 'Lookup',
@@ -33,7 +33,7 @@
 //     active: LookupData[9],
 //     sort_order: LookupData[10]
 //   };
-  
+
 //   return NewLookup;
 // }
 

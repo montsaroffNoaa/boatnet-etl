@@ -1,70 +1,14 @@
-import * as dbconnections from './../../dbconnections'
-import { Taxonomy, CatchGrouping, CatchGroupingTypeName, TaxonomyAlias } from '../libs/bn-models';
-import { getPacfinSpeciesTable } from '../TaxonomyToCouch/query-pacfin-species';
-import { RetrieveEntireViewCouchDB, ExecuteOracleSQL } from '../TaxonomyAliases';
-import { WarehouseConnection, ReleasePostgres, InsertBulkCouchDB, WcgopConnection } from '../TaxonomyToCouch';
 
-
-
-var UploadedBy = 'nicholas.shaffer@noaa.gov';
-var UploadedDate: any;
-var CreatedBy = 'nicholas.shaffer@noaa.gov';
-var CreatedDate: any;
-
-var oracledb = require('oracledb');
-var moment = require('moment');
-const { Pool, Client } = require('pg')
-
-// Couch Connection
-var CouchDBName: string = dbconnections['CouchDBName']
-var CouchHost: string = dbconnections['CouchHost']
-var CouchPass: string = dbconnections['CouchPass']
-var CouchPort: string = dbconnections['CouchPort']
-var CouchUser: string = dbconnections['CouchUser']
-
-// Data Warehouse Connection
-var DWHost: string = dbconnections['DWHost']
-var DWPort: string = dbconnections['DWPort']
-var DWUser: string = dbconnections['DWUser']
-var DWPass: string = dbconnections['DWPass']
-var DWInitialDB: string = dbconnections['DWInitialDB']
-
-
-// ASHOP Connection
-var NorpacServiceName: string = dbconnections['NorpacServiceName']
-var NorpacHost: string = dbconnections['NorpacHost']
-var NorpacPass: string = dbconnections['NorpacPass']
-var NorpacPort: string = dbconnections['NorpacPort']
-var NorpacUser: string = dbconnections['NorpacUser']
-var strNorpacConnection: string = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=" + NorpacHost + ")(PORT=" + NorpacPort + "))(CONNECT_DATA =(SERVICE_NAME=" + NorpacServiceName + ")))"
-
-// WCGOP Connection
-var IFQServiceName: string = dbconnections['IFQServiceName']
-var IFQHost: string = dbconnections['IFQHost']
-var IFQPass: string = dbconnections['IFQPass']
-var IFQPort: string = dbconnections['IFQPort']
-var IFQUser: string = dbconnections['IFQUser']
-var strIFQConnection: string = "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=" + IFQHost + ")(PORT=" + IFQPort + "))(CONNECT_DATA =(SERVICE_NAME=" + IFQServiceName + ")))"
-
-// Create connection to Couch to last entire runtime of application
-var couchurl: string = "https://" + CouchUser + ":" + CouchPass + "@" + CouchHost + ":" + CouchPort
-const couchDB = require('nano')({
-    url: couchurl,
-    requestDefaults: {
-        pool: {
-            maxSockets: Infinity
-        }
-    }
-});
-
-var dbName = couchDB.use(CouchDBName);
+import { getPacfinSpeciesTable } from '../Taxonomy/query-pacfin-species';
+import { CatchGrouping, Taxonomy, TaxonomyAlias, CatchGroupingTypeName } from '../../../boatnet/libs/bn-models/models';
+import { RetrieveEntireViewCouchDB, ExecuteOracleSQL, InsertBulkCouchDB, ReleasePostgres, WcgopConnection, WarehouseConnectionClient } from '../Common/common-functions';
+import { CreatedBy, CreatedDate, UploadedBy, UploadedDate } from '../Common/common-variables';
 
 // Setting this process var to "0" is extremely unsafe in most situations, use with care.
 // It is unsafe because Node does not like self signed TLS (SSL) certificates, 
 // this setting disables Node's rejection of invalid or unauthorized certificates, and allows them.
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
-console.log('CouchDB connection configured successfully.');
-
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+// console.log('CouchDB connection configured successfully.');
 
 function getLowestTaxonLevelName(dwTaxonObj: any) {
     // ugly function to "recursively" get the lowest grain level of the taxonomy for a given record
@@ -280,6 +224,7 @@ async function PacfinCatchGroupingsETL() {
 
 
 }
+
 async function WarehouseCatchGroupingsETL() {
     // mostly any item that has a clear and obvious reference to multiple species in its name/record, ie: "(fish1 / fish2)"
     // this is partly hard coded to grab the edge cases to deal with
@@ -299,7 +244,7 @@ async function WarehouseCatchGroupingsETL() {
 
     // sebastes items:
     let sebastesIDs = '(7271, 7272, 7270, 6460, 6249, 7269, 2170, 7218, 7220, 2172, 7219)';
-    let client = await WarehouseConnection();
+    let client = await WarehouseConnectionClient();
     let dwTaxonomyData = await client.query('SELECT * FROM dw.taxonomy_dim WHERE taxonomy_whid IN ' + sebastesIDs);
     dwTaxonomyData = dwTaxonomyData.rows;
     await ReleasePostgres(client);
@@ -339,7 +284,7 @@ async function WarehouseCatchGroupingsETL() {
     }
 
     // unidentified items
-    client = await WarehouseConnection();
+    client = await WarehouseConnectionClient();
     dwTaxonomyData = await client.query("SELECT * FROM dw.taxonomy_dim WHERE lower(common_name) like '%unid%' and scientific_name_taxonomic_level = 'non-std taxon' AND taxonomy_whid NOT IN (7270, 7271)");
     dwTaxonomyData = dwTaxonomyData.rows;
     await ReleasePostgres(client);
@@ -452,8 +397,6 @@ async function OtherCatchGroupings() {
 
 
 }
-
-
 
 
 export async function CatchGroupingsETL() {

@@ -42,7 +42,7 @@
 //   brd_present: boolean;
 //   catches: CatchWCGOP[];
 
-  
+
 // }
 
 
@@ -52,7 +52,7 @@
 //   let bDataQuality: boolean;
 //   let bBRDPresent: boolean;
 
-  
+
 //   if (HaulData[22] == 'EFP'){
 //     bEFP = true;
 //   } else {
@@ -114,14 +114,14 @@
 //       data_source: HaulData[31],
 
 //       data_quality: bDataQuality,
-    
+
 
 //       cal_weight: HaulData[33],
 //       fit: HaulData[34],    
-      
+
 //       brd_present: bBRDPresent,
 //       catches: Catches
-      
+
 //     }
 //     return NewHaul;
 // }

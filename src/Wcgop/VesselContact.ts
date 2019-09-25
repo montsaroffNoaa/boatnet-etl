@@ -16,7 +16,7 @@
 //     created_date: Date;
 //     modified_by: UserWCGOP;
 //     modified_date: Date;
-    
+
 // }
 
 // export function ConstructVesselContact(VesselContactData: any, CreatedBy: UserWCGOP, ModifiedBy: UserWCGOP, ContactUser: Contact, Vessel: Vessel){

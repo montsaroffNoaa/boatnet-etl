@@ -122,7 +122,7 @@
 //     dataSource: TripData[33],
 
 //     haulIDs: Hauls,
-    
+
 //     legacy: {
 //       tripId: TripData[0],
 //       otcKp: TripData[17],

@@ -1,6 +1,8 @@
 import axios from 'axios';
-import moment, { unitOfTime } from 'moment';
-import { GetItisTsnsByScientificName, GenerateCouchID, GetFullHierarchyByTsn } from '.';
+import { GetItisTsnsByScientificName, GetFullHierarchyByTsn } from './taxonomy-etl';
+import { GenerateCouchID } from '../Common/common-functions';
+import { Taxonomy } from '../../../boatnet/libs/bn-models';
+import { dbName } from '../Common/db-connection-variables';
 
 const pacfinPrefix = 'https://reports.psmfc.org/pacfin/';
 const pacfinHomePage = pacfinPrefix + 'f?p=501:1000::::::';
@@ -9,24 +11,6 @@ const downloadURLPrefix = pacfinPrefix + 'f?p=501:810:'; // 901 for fish tickets
 const downloadURLSuffix = ':CSVDOWNLOAD::::';
 
 
-import * as dbconnections from './../../dbconnections'
-import { Taxonomy } from '../libs/bn-models';
-var CouchDBName: string = dbconnections['CouchDBName']
-var CouchHost: string = dbconnections['CouchHost']
-var CouchPass: string = dbconnections['CouchPass']
-var CouchPort: string = dbconnections['CouchPort']
-var CouchUser: string = dbconnections['CouchUser']
-var couchurl: string = "https://" + CouchUser + ":" + CouchPass + "@" + CouchHost + ":" + CouchPort
-const couchDB = require('nano')({
-    url: couchurl,
-    requestDefaults: {
-        pool: {
-            maxSockets: Infinity
-        }
-    }
-});
-
-var dbName = couchDB.use(CouchDBName);
 var dictTaxonomyByItisID: { [id: number]: any; } = {};
 
 
@@ -196,7 +180,7 @@ export async function PacfinSpeciesETL() {
         let lstReturnedTsns = await GetItisTsnsByScientificName(lstSpeciesData[i][2]);
         if (lstReturnedTsns.length == 1) {
             let lstHierarchy = await GetFullHierarchyByTsn(lstReturnedTsns[0]);
-            if(lstHierarchy.length < 2){
+            if (lstHierarchy.length < 2) {
                 console.log('invalid tsn: ', lstReturnedTsns[0]);
             }
             await processHierarchy(lstHierarchy, lstSpeciesData[i][0]);
