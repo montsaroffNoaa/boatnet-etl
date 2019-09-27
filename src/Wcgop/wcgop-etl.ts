@@ -1,24 +1,26 @@
-
 import * as oraclesql from './oracle-sql'
-import { Program, HlfcProductDeliveryState, HlfcAerialExtent, HlfcHorizontalExtent, HlfcMitigationType, Basket, Person, Species, Behavior, InteractionType, Port, FirstReceiver, FirstReceiverTypeName, Vessel, BeaufortTypeName, DiscardReasonTypeName, BiostructureTypeTypeName, BodyLengthTypeName, ConfidenceTypeName, ContactTypeTypeName, ContactCategoryTypeName, InteractionTypeTypeName, InteractionOutcomeTypeName, RelationshipTypeName, TripStatusTypeName, VesselTypeTypeName, BiosampleSampleMethodTypeName, SpeciesCategoryTypeName, SpeciesSubCategoryTypeName, GearPerformanceTypeName, CatchDispositionTypeName, VesselCaptain } from '../../../boatnet/libs/bn-models/models';
-import { CouchDBName } from '../../../dbconnections';
-import { FishingLocation } from '../../../boatnet/libs/bn-models/models/_common/fishing-location';
-import { WcgopCatch, WcgopOperation, WcgopHlfcConfiguration, Measurement, WcgopSpecimen, Biostructure, WcgopFishTicket, SightingEvent, InteractionEvent, WcgopTrip, VesselStatusTypeName, WaiverTypeTypeName, WeightMethodTypeName } from '../../../boatnet/libs/bn-models/models';
-import { GenerateCouchID, GenerateCouchIDs, ExecuteOracleSQL, RemoveDocNullVals, ReleaseOracle, InsertBulkCouchDB, Transpose, WcgopConnection } from '../Common/common-functions';
+import { Program, Species, Port, FirstReceiver, FirstReceiverTypeName, BeaufortTypeName, DiscardReasonTypeName, BiostructureTypeTypeName, BodyLengthTypeName, ConfidenceTypeName, ContactTypeTypeName, ContactCategoryTypeName, InteractionTypeTypeName, InteractionOutcomeTypeName, RelationshipTypeName, TripStatusTypeName, VesselTypeTypeName, BiosampleSampleMethodTypeName, SpeciesCategoryTypeName, SpeciesSubCategoryTypeName, GearPerformanceTypeName, CatchDispositionTypeName, VesselCaptain } from '../../../boatnet/libs/bn-models/models';
+import { VesselStatusTypeName, WaiverTypeTypeName, WeightMethodTypeName } from '../../../boatnet/libs/bn-models/models';
+import { ExecuteOracleSQL, RemoveDocNullVals, ReleaseOracle, InsertBulkCouchDB, Transpose, WcgopConnection, CreateWcgopViews, GetDocFromDict } from '../Common/common-functions';
 import { UploadedBy, UploadedDate, CreatedDate } from '../Common/common-variables';
 import { dbName } from '../Common/db-connection-variables';
-import { ConstructFishingLocation, ConstructHaulWCGOP, ConstructHLFC, ConstructCatchWCGOP, ConstructDissections, ConstructWcgopSpecimenFromItems, ConstructWcgopSpecimenFromFreq, ConstructCatchSpeciesFromBio, ConstructBaskets, ConstructCatchSpeciesFromComp, ConstructPerson, ConstructFishTicket, ConstructLookup, ConstructSightingEvent, ConstructInteractionEvent, ConstructProgram, ConstructPort, ConstructTripWCGOP, ConstructTripCertificate, ConstructVessel } from './construct-wcgop-objects';
-
+import { ConstructTripCertificate } from './construct-wcgop-objects';
+import { BuildTrip } from './build-trip';
+import { BuildHaul } from './build-haul';
+import { BuildCatch } from './build-catch';
+import { BuildPort } from './build-port';
+import { BuildProgram } from './build-program';
+import { BuildLookups } from './build-lookups';
+import { BuildReceiver } from './build-first-receiver';
 
 var dictCatchCat: { [id: number]: any; } = {};
 var dictUsers: { [id: number]: any; } = {};
-var dictPorts: { [id: number]: any; } = {};
-var dictProgram: { [id: number]: Program; } = {};
-var dictVessels: { [id: number]: any; } = {};
-var dictContacts: { [id: number]: any; } = {};
-var dictDiscardReasons: { [id: number]: any; } = {};
-var dictSpecies: { [id: number]: any; } = {};
-
+export var dictPorts: { [id: number]: any; } = {};
+export var dictProgram: { [id: number]: Program; } = {};
+export var dictVessels: { [id: number]: any; } = {};
+export var dictContacts: { [id: number]: any; } = {};
+export var dictDiscardReasons: { [id: number]: any; } = {};
+export var dictSpecies: { [id: number]: any; } = {};
 
 export var dictRelation: { [id: number]: any; } = {};
 export var dictContactCategory: { [id: number]: any; } = {};
@@ -26,47 +28,47 @@ export var dictContactType: { [id: number]: any; } = {};
 export var dictBiostructureType: { [id: number]: any; } = {};
 export var dictVesselType: { [id: number]: any; } = {};
 export var dictVesselStatus: { [id: number]: any; } = {};
-var dictTripStatus: { [id: number]: any; } = {};
-var dictHlfcProductDelivery: { [id: number]: any; } = {};
-var dictHlfcMitigationTypes: { [id: number]: any; } = {};
-var dictHlfcAerialEtent: { [id: number]: any; } = {};
-var dictHlfcHorizontalExtent: { [id: number]: any; } = {};
-var dictSpeciesSubCategory: { [id: number]: any; } = {};
-var dictSpeciesCategory: { [id: number]: any; } = {};
-var dictBiospecimenSampleMethod: { [id: number]: any; } = {};
-var dictWeightMethod: { [id: number]: any; } = {};
-var dictDisposition: { [id: number]: any; } = {};
-var dictGearPerformance: { [id: number]: any; } = {};
-var dictGearType: { [id: number]: any; } = {};
-var dictSightingCondition: { [id: number]: any; } = {};
-var dictFishingInteraction: { [id: number]: any; } = {};
-var dictInteractionBehaviors: { [id: number]: any; } = {};
-var dictInteractionOutcome: { [id: number]: any; } = {};
-var dictConfidence: { [id: number]: any; } = {};
-var dictBodyLength: { [id: number]: any; } = {};
-var dictBeaufort: { [id: number]: any; } = {};
-var dictFishery: { [id: number]: any; } = {};
-var dictFirstReceivers: { [id: number]: any; } = {};
-var dictAllBaskets: { [id: number]: any; } = {};
+export var dictTripStatus: { [id: number]: any; } = {};
+export var dictHlfcProductDelivery: { [id: number]: any; } = {};
+export var dictHlfcMitigationTypes: { [id: number]: any; } = {};
+export var dictHlfcAerialEtent: { [id: number]: any; } = {};
+export var dictHlfcHorizontalExtent: { [id: number]: any; } = {};
+export var dictSpeciesSubCategory: { [id: number]: any; } = {};
+export var dictSpeciesCategory: { [id: number]: any; } = {};
+export var dictBiospecimenSampleMethod: { [id: number]: any; } = {};
+export var dictWeightMethod: { [id: number]: any; } = {};
+export var dictDisposition: { [id: number]: any; } = {};
+export var dictGearPerformance: { [id: number]: any; } = {};
+export var dictGearType: { [id: number]: any; } = {};
+export var dictSightingCondition: { [id: number]: any; } = {};
+export var dictFishingInteraction: { [id: number]: any; } = {};
+export var dictInteractionBehaviors: { [id: number]: any; } = {};
+export var dictInteractionOutcome: { [id: number]: any; } = {};
+export var dictConfidence: { [id: number]: any; } = {};
+export var dictBodyLength: { [id: number]: any; } = {};
+export var dictBeaufort: { [id: number]: any; } = {};
+export var dictFishery: { [id: number]: any; } = {};
+export var dictFirstReceivers: { [id: number]: any; } = {};
+export var dictAllBaskets: { [id: number]: any; } = {};
 
 // ENTIRE TABLES LOADED INTO MEMORY HERE
 // id = table ID, value = array of returned fields (from oraclesql file)
-var dictAllDissections: { [id: number]: any; } = {};
-var dictAllBiospecimenItems: { [id: number]: any; } = {};
-var dictAllBiospecimens: { [id: number]: any; } = {};
-var dictAllLengthFrequencies: { [id: number]: any; } = {};
-var dictAllSpeciesCompositions: { [id: number]: any; } = {};
-var dictAllHlfc: { [id: number]: any; } = {};
-var dictAllSpeciesSightings: { [id: number]: any; } = {};
-var dictAllSpeciesInteractions: { [id: number]: any; } = {};
-var dictAllSpeciesSightingsHaulsXREF: { [id: number]: any; } = {};
-var dictAllFishTickets: { [id: number]: any; } = {};
-var dictAllFishingLocations: { [id: number]: any; } = {};
-var dictAllCatchCategory: { [id: number]: any; } = {};
+export var dictAllDissections: { [id: number]: any; } = {};
+export var dictAllBiospecimenItems: { [id: number]: any; } = {};
+export var dictAllBiospecimens: { [id: number]: any; } = {};
+export var dictAllLengthFrequencies: { [id: number]: any; } = {};
+export var dictAllSpeciesCompositions: { [id: number]: any; } = {};
+export var dictAllHlfc: { [id: number]: any; } = {};
+export var dictAllSpeciesSightings: { [id: number]: any; } = {};
+export var dictAllSpeciesInteractions: { [id: number]: any; } = {};
+export var dictAllSpeciesSightingsHaulsXREF: { [id: number]: any; } = {};
+export var dictAllFishTickets: { [id: number]: any; } = {};
+export var dictAllFishingLocations: { [id: number]: any; } = {};
+export var dictAllCatchCategory: { [id: number]: any; } = {};
 
-var dictAllCatches: { [id: number]: any; } = {};
-var dictAllHauls: { [id: number]: any; } = {};
-var dictAllTrips: { [id: number]: any; } = {};
+export var dictAllCatches: { [id: number]: any; } = {};
+export var dictAllHauls: { [id: number]: any; } = {};
+export var dictAllTrips: { [id: number]: any; } = {};
 
 var moment = require('moment');
 
@@ -96,40 +98,9 @@ var strSpeciesSightingSQL: string = oraclesql['strSpeciesSightingSQL']
 // process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 // console.log('CouchDB connection configured successfully.');
 
-async function UpdateDocCouchDB(UpdatedDoc: any) {
-    await dbName.insert(UpdatedDoc).then((data: any) => {
-        //console.log(data)
-    }).catch((error: any) => {
-        console.log("update failed", error, UpdatedDoc);
-
-    });
-}
-async function FetchRevID(strProperty: string, iOldID: number, ViewName: string) {
+export async function FetchRevID(strProperty: string, iOldID: number, ViewName: string) {
     let strDocID;
     let strDocRev;
-    // const Params = {
-    //   selector: {
-    //     [strProperty]: { "$eq": iOldID}
-    //   },
-    //   fields: [ "_id", "_rev"],
-    //   limit:50
-    // };
-    // await dbName.find(Params).then((data: any) => {
-    //   //console.log(data);
-    //   if (data.docs.length == 0){
-    //     strDocID = null;
-    //     strDocRev = null;
-    //   } 
-    //   else {
-    //     strDocID = data.docs[0]._id;
-    //     strDocRev = data.docs[0]._rev;
-    //   }
-
-    // }).catch((error: any) => {
-    //   console.log("fetchRevID failed", error, strProperty, iOldID);
-    //   return false;
-    // });
-
 
     await dbName.view('MainDocs', ViewName, {
         'key': iOldID,
@@ -151,66 +122,6 @@ async function FetchRevID(strProperty: string, iOldID: number, ViewName: string)
     return [strDocID, strDocRev];
 }
 
-async function QueryLookupView(ViewName: string, iLookupID: number) {
-    let strDocID, strDocRev: string;
-    await dbName.view('LookupDocs', ViewName, {
-        'key': iLookupID,
-        'include_docs': true
-    }).then((data: any) => {
-        if (data.rows.length > 0) {
-            strDocID = data.rows[0].id;
-            strDocRev = data.rows[0].value;
-        }
-    }).catch((error: any) => {
-        console.log(error, ViewName, iLookupID);
-    });
-    return [strDocID, strDocRev]
-}
-
-export async function FetchDocument(iOldID: number, ViewName: string, DesignName: string) {
-    let strDocID;
-    let strDocRev;
-    let Document;
-    // const Params = {
-    //   selector: {
-    //     [strProperty]: { "$eq": iOldID}
-    //   },
-    //   limit:50
-    // };
-    // await dbName.find(Params).then((data: any) => {
-    //   //console.log(data);
-    //   if (data.docs.length == 0){
-    //     strDocID = null;
-    //     strDocRev = null;
-    //     Document = null;
-    //   } 
-    //   else {
-    //     strDocID = data.docs[0]._id;
-    //     strDocRev = data.docs[0]._rev;
-    //     Document = data.docs[0];
-    //   }
-
-    // }).catch((error: any) => {
-    //   console.log("FetchDocument failed", error, strProperty, iOldID);
-    // });
-
-
-    await dbName.view(DesignName, ViewName, {
-        'key': iOldID,
-        'include_docs': true
-    }).then((data: any) => {
-        if (data.rows.length > 0) {
-            strDocID = data.rows[0].id;
-            strDocRev = data.rows[0].value;
-            Document = data.rows[0].doc
-        }
-    }).catch((error: any) => {
-        console.log(error, DesignName, ViewName);
-    });
-
-
-    return [strDocID, strDocRev, Document];
-}
 async function FetchHaulsAndRevID(iOldTripID: number, ViewName: string) {
     let strDocID;
     let strDocRev;
@@ -265,598 +176,12 @@ async function FetchHaulsAndRevID(iOldTripID: number, ViewName: string) {
 
     return [strDocID, strDocRev, lstHaulIDs];
 }
-async function CreateViews() {
-
-    let LookupDocs: any = {
-        "_id": "_design/LookupDocs",
-        "views": {
-            "beaufort-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'beaufort') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "biostructure-type-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'biostructure-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "discard-reason-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'discard-reason') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "confidence-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'confidence') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "body-length-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'body-length') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "contact-type-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'contact-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "interaction-type-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'interaction-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "contact-category-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'contact-category') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "interaction-outcome-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'interaction-outcome') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "relationship-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'relationship') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "trip-status-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'trip-status') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "vessel-status-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'vessel-status') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "vessel-type-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'vessel-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "waiver-type-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'waiver-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "waiver-reason-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'waiver-reason-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "weight-method-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'weight-method') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "biospecimen-sample-method-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'biospecimen-sample-method') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "species-sub-category-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'species-sub-category') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "species-category-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'species-category') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "gear-performance-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'gear-performance') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "catch-disposition-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'catch-disposition') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "gear-type-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'gear-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "sighting-condition-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'sighting-condition') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "fishery-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'fishery') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "first-receiver-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'first-receiver') { \r\n    emit(doc.legacy.ifqDealerId, doc._rev);\r\n  }\r\n}"
-            },
-            "behavior-type-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'behavior-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "hlfc-mitigation-type-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'hlfc-mitigation-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "hlfc-horizontal-extent-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'hlfc-horizontal-extent') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "hlfc-aerial-extent-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'hlfc-aerial-extent') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            },
-            "hlfc-product-delivery-state-lookup": {
-                "map": "function (doc) {\r\n  if (doc.type == 'hlfc-product-delivery-state') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
-            }
-
-
-
-        },
-        "language": "javascript"
-    }
-
-    await dbName.get('_design/LookupDocs').then((body: any) => {
-        LookupDocs._rev = body._rev;
-    }).catch((error: any) => {
-    });
-
-
-    await dbName.insert(LookupDocs).then((data: any) => {
-        console.log(data)
-    }).catch((error: any) => {
-        console.log("update failed", error, LookupDocs);
-
-    });
-
-    let MainDocs: any = {
-        "_id": "_design/MainDocs",
-        "views": {
-            "all-operations": {
-                "map": "function (doc) {\r\n  if (doc.type == 'wcgop-operation') { \r\n    emit(doc.legacy.fishingActivityId, doc._rev);\r\n  }\r\n}"
-            },
-            "all-trips": {
-                "map": "function (doc) {\r\n  if (doc.type == 'wcgop-trip') { \r\n    emit(doc.legacy.tripId, doc._rev);\r\n  }\r\n}"
-            },
-            "all-vessels": {
-                "map": "function (doc) {\r\n  if (doc.type == 'vessel') { \r\n    emit(doc.legacy.vesselId, doc._rev);\r\n  }\r\n}"
-            },
-            "all-contacts": {
-                "map": "function (doc) {\r\n  if (doc.type == 'person') { \r\n    emit(doc.legacy.PersonId, doc._rev);\r\n  }\r\n}"
-            },
-            "all-ports": {
-                "map": "function (doc) {\r\n  if (doc.type == 'port') { \r\n    emit(doc.legacy.portId, doc._rev);\r\n  }\r\n}"
-            },
-            "all-programs": {
-                "map": "function (doc) {\r\n  if (doc.type == 'program') { \r\n    emit(doc.legacy.programId, doc._rev);\r\n  }\r\n}"
-            },
-            "all-species": {
-                "map": "function (doc) {\r\n  if (doc.type == 'species') { \r\n    emit(doc.legacy.speciesId, doc._rev);\r\n  }\r\n}"
-            }
-        },
-        "language": "javascript"
-    }
-
-    await dbName.get('_design/MainDocs').then((body: any) => {
-        MainDocs._rev = body._rev;
-    }).catch((error: any) => {
-    });
-
-    await dbName.insert(MainDocs).then((data: any) => {
-        console.log(data)
-    }).catch((error: any) => {
-        console.log("update failed", error, MainDocs);
-
-    });
-
-
-}
-
-// Checks if subdocument exists in dictionary instance, if not, fetches from couch and adds to global dict passed in
-export async function GetDocFromDict(dictDocuments: { [id: number]: any; }, iID: number, ViewName: string, DesignName: string) {
-    let Document;
-    if (iID != null) {
-        if (iID in dictDocuments) {
-            Document = dictDocuments[iID];
-        } else {
-            [, , Document] = await FetchDocument(iID, ViewName, DesignName);
-            dictDocuments[iID] = Document;
-        }
-    } else {
-        Document = null;
-    }
-    return Document;
-}
 
 // Each function beginning with "Build" refers to a document or sub document built from a table in OBSPROD
 async function BuildBRD(odb: any, iBRDID: number) {
 
 
 }
-
-async function BuildFishingLocations(odb: any, iHaulID: number) {
-    let lstAllFishingLocations: FishingLocation[] = [];
-
-    if (iHaulID in dictAllFishingLocations) {
-        let lstLocationsByHaul = dictAllFishingLocations[iHaulID];
-
-        for (let i = 0; i < lstLocationsByHaul.length; i++) {
-            let NewLocation: FishingLocation = await ConstructFishingLocation(lstLocationsByHaul[i]);
-            lstAllFishingLocations.push(NewLocation);
-        }
-    }
-    return lstAllFishingLocations;
-}
-async function BuildHaul(odb: any, iHaulID: number, lstCatches: WcgopCatch[]) {
-    if (iHaulID != undefined) {
-        //let lstHaulData = await ExecuteOracleSQL(odb, strHaulSQL + iHaulID);
-        let lstHaulData = dictAllHauls[iHaulID];
-        //lstHaulData = lstHaulData[0]
-
-        if (lstHaulData == null) {
-            console.log('lstHaulData is null, error')
-        }
-
-        let iUserCreatedbyID = lstHaulData[14];
-        let iUserModifiedByID = lstHaulData[16];
-
-        let lstFishingLocations: FishingLocation[] = await BuildFishingLocations(odb, iHaulID);
-
-        let WeightMethod = await GetDocFromDict(dictWeightMethod, lstHaulData[4], 'weight-method-lookup', 'LookupDocs')
-        if (WeightMethod != null) {
-            WeightMethod = {
-                description: WeightMethod.description,
-                _id: WeightMethod._id
-            }
-        }
-
-        let GearPerformance = await GetDocFromDict(dictGearPerformance, lstHaulData[7], 'gear-performance-lookup', 'LookupDocs')
-        if (GearPerformance != null) {
-            GearPerformance = {
-                description: GearPerformance.description,
-                _id: GearPerformance._id
-            }
-        }
-
-        let GearType = await GetDocFromDict(dictGearType, lstHaulData[6], 'gear-type-lookup', 'LookupDocs')
-        if (GearType != null) {
-            GearType = {
-                description: GearType.description,
-                _id: GearType._id
-            }
-        }
-
-        let CreatedBy = iUserCreatedbyID // await GetDocFromDict(dictUsers, iUserCreatedbyID, 'legacy.userId');
-        let ModifiedBy = iUserModifiedByID // await GetDocFromDict(dictUsers, iUserModifiedByID, 'legacy.userId');
-
-        let cHaul: WcgopOperation = ConstructHaulWCGOP(lstHaulData, CreatedBy, ModifiedBy, lstCatches, WeightMethod, GearPerformance, GearType, lstFishingLocations);
-
-        return cHaul;
-    } else {
-        return null;
-    }
-}
-
-async function BuildHlfc(iTripID: number) {
-
-    if (iTripID != null && iTripID in dictAllHlfc) {
-
-        let lstHlfcData = dictAllHlfc[iTripID];
-        let HLFCConfigurations: WcgopHlfcConfiguration[] = [];
-
-        for (let i = 0; i < lstHlfcData.length; i++) {
-            let AvgSpeed: Measurement;
-            if (lstHlfcData[i][4] != null) {
-                AvgSpeed = {
-                    measurementType: 'speed',
-                    value: lstHlfcData[i][4],
-                    units: 'knots'
-                }
-            } else {
-                AvgSpeed = null;
-            }
-
-            let WeightPerSinker: Measurement;
-            if (lstHlfcData[i][9] != null) {
-                WeightPerSinker = {
-                    measurementType: 'weight',
-                    value: lstHlfcData[i][9],
-                    units: 'lbs'
-                }
-            } else {
-                WeightPerSinker = null;
-            }
-
-            let RawHaulIDs = [];
-            if (lstHlfcData[i][2] != null) {
-                RawHaulIDs = lstHlfcData[i][2].split(',');
-            }
-            let CouchOperationIDs: string[] = [];
-            for (let j = 0; j < RawHaulIDs.length; j++) {
-                let OperationID: string;
-                [OperationID,] = await FetchRevID(null, parseInt(RawHaulIDs[j]), 'all-operations')
-                CouchOperationIDs.push(OperationID);
-            }
-
-
-
-            let ProductDelivery: HlfcProductDeliveryState = await GetDocFromDict(dictHlfcProductDelivery, lstHlfcData[i][3], 'hlfc-product-delivery-state-lookup', 'LookupDocs')
-
-            if (ProductDelivery != null) {
-                ProductDelivery = {
-                    description: ProductDelivery.description,
-                    _id: ProductDelivery._id
-                }
-            }
-            let AerialExtent: HlfcAerialExtent = await GetDocFromDict(dictHlfcAerialEtent, lstHlfcData[i][13], 'hlfc-aerial-extent-lookup', 'LookupDocs')
-
-            if (AerialExtent != null) {
-                AerialExtent = {
-                    description: AerialExtent.description,
-                    _id: AerialExtent._id
-                }
-            }
-            let HorizontalExtent: HlfcHorizontalExtent = await GetDocFromDict(dictHlfcHorizontalExtent, lstHlfcData[i][14], 'hlfc-horizontal-extent-lookup', 'LookupDocs')
-
-            if (HorizontalExtent != null) {
-                HorizontalExtent = {
-                    description: HorizontalExtent.description,
-                    _id: HorizontalExtent._id
-                }
-            }
-            let MitigationConfig: HlfcMitigationType[] = [];
-
-            let lstAvoidance = [];
-            if (lstHlfcData[i][12] != null) {
-                lstAvoidance = lstHlfcData[i][12].split(',');
-            }
-
-            for (let j = 0; j < lstAvoidance.length; j++) {
-                let MitigationItem = await GetDocFromDict(dictHlfcMitigationTypes, lstAvoidance[j], 'hlfc-mitigation-type-lookup', 'LookupDocs')
-                if (MitigationItem != null) {
-                    MitigationItem = {
-                        description: MitigationItem.description,
-                        _id: MitigationItem._id
-                    }
-                    MitigationConfig.push(MitigationItem);
-                }
-            }
-            if (lstAvoidance.length == 0) {
-                lstAvoidance = null;
-            }
-
-            let bFloatsUsed: boolean;
-            if (lstHlfcData[i][6] == 1) {
-                bFloatsUsed = true;
-            } else if (lstHlfcData[i][6] == 0) {
-                bFloatsUsed = false
-            } else {
-                bFloatsUsed = null;
-            }
-
-            let bWeightsUsed: boolean;
-            if (lstHlfcData[i][8] == 1) {
-                bWeightsUsed = true;
-            } else if (lstHlfcData[i][8] == 0) {
-                bWeightsUsed = false
-            } else {
-                bWeightsUsed = null;
-            }
-
-            let CouchID = await GenerateCouchID();
-            let HlfcItem = ConstructHLFC(CouchID, lstHlfcData, AvgSpeed, WeightPerSinker, ProductDelivery, MitigationConfig, AerialExtent, HorizontalExtent, CouchOperationIDs, bFloatsUsed, bWeightsUsed)
-            HLFCConfigurations.push(HlfcItem);
-        }
-        return HLFCConfigurations;
-    } else {
-        return null;
-    }
-
-
-}
-async function BuildCatch(odb: any, iCatchID: number) {
-    if (iCatchID != undefined) {
-        //let lstCatchData = await ExecuteOracleSQL(odb, strCatchSQL + iCatchID);
-        let lstCatchData = dictAllCatches[iCatchID]
-        //lstCatchData = lstCatchData[0]
-        let iCatchCatID = lstCatchData[2];
-        let iUserCreatedByID = lstCatchData[15];
-        let iUserModifiedByID = lstCatchData[17];
-        //let lstCatchCatData = await ExecuteOracleSQL(odb, strCatchCategorySQL + iCatchCatID);
-        let lstCatchCatData;
-        let strCatchName;
-        let strCatchCode;
-        if (iCatchCatID in dictAllCatchCategory) {
-            lstCatchCatData = dictAllCatchCategory[iCatchCatID]
-            strCatchName = lstCatchCatData[1];
-            strCatchCode = lstCatchCatData[2];
-        } else {
-            lstCatchCatData = null;
-        }
-
-        let WeightMethod = await GetDocFromDict(dictWeightMethod, lstCatchData[5], 'weight-method-lookup', 'LookupDocs')
-        if (WeightMethod != null) {
-            WeightMethod = {
-                description: WeightMethod.description,
-                _id: WeightMethod._id
-            }
-        }
-
-        let Disposition = await GetDocFromDict(dictDisposition, lstCatchData[7], 'catch-disposition-lookup', 'LookupDocs')
-        if (Disposition != null) {
-            Disposition = {
-                description: Disposition.description,
-                _id: Disposition._id
-            }
-        }
-
-        let CreatedBy = iUserCreatedByID // await GetDocFromDict(dictUsers, iUserCreatedByID, 'legacy.userId');
-        let ModifiedBy = iUserModifiedByID // await GetDocFromDict(dictUsers, iUserModifiedByID, 'legacy.userId');
-
-        let SubCatch: WcgopCatch[] = await BuildCatchSpecies(odb, iCatchID);
-
-        if (SubCatch.length == 0) {
-            SubCatch = null;
-        }
-        let cCatch: WcgopCatch = ConstructCatchWCGOP(lstCatchData, CreatedBy, ModifiedBy, iCatchCatID, strCatchName, strCatchCode, SubCatch, WeightMethod, Disposition);
-        return cCatch;
-    } else {
-        return null;
-    }
-}
-
-async function BuildCatchSpecies(odb: any, iCatchID: number) {
-
-    let CatchSpecies: WcgopCatch[] = [];
-    //let CatchSpeciesData = await ExecuteOracleSQL(odb,  strBioSpecimensSQL + iCatchID);
-    let BioSpecimenData: any[] = [];
-
-    if (iCatchID in dictAllBiospecimens) {
-        BioSpecimenData = dictAllBiospecimens[iCatchID];
-    } else {
-        BioSpecimenData = [];
-    }
-
-    // CatchSpecies from Biospecimen
-    for (let i = 0; i < BioSpecimenData.length; i++) {
-        let iBioSpecimenID = BioSpecimenData[i][0];
-        //let SpecimenItemData = await ExecuteOracleSQL(odb, strBioSpecimenItemsSQL + iBioSpecimenID)
-        let SpecimenItemData = [];
-        if (iBioSpecimenID in dictAllBiospecimenItems) {
-            SpecimenItemData = dictAllBiospecimenItems[iBioSpecimenID];
-        }
-
-        let lstSpecimens: WcgopSpecimen[] = [];
-        let Species = await GetDocFromDict(dictSpecies, BioSpecimenData[i][2], 'all-species', 'MainDocs')
-        if (Species != null) {
-            Species = {
-                scientificName: Species.scientificName,
-                commonName: Species.commonName,
-                _id: Species._id
-            }
-        }
-        let DiscardReason = await GetDocFromDict(dictDiscardReasons, BioSpecimenData[i][13], 'discard-reason-lookup', 'LookupDocs');
-        if (DiscardReason != null) {
-            DiscardReason = {
-                description: DiscardReason.description,
-                _id: DiscardReason._id
-            }
-        }
-        //let BioSampleMethod = CatchSpeciesData[i][3];
-        let BioSampleMethod = await GetDocFromDict(dictBiospecimenSampleMethod, BioSpecimenData[i][3], 'biospecimen-sample-method-lookup', 'LookupDocs')
-        if (BioSampleMethod != null) {
-            BioSampleMethod = {
-                description: BioSampleMethod.description,
-                _id: BioSampleMethod._id
-            }
-        }
-        let iCatchID = BioSpecimenData[i][1];
-
-        // biospecimen items data
-        for (let j = 0; j < SpecimenItemData.length; j++) {
-            let iSpecimenItemID = SpecimenItemData[j][0];
-            //let AllDissectionData = await ExecuteOracleSQL(odb, strDissectionsSQL + iSpecimenItemID);
-            let AllDissectionData = [];
-
-            if (iSpecimenItemID in dictAllDissections) {
-                AllDissectionData = dictAllDissections[iSpecimenItemID];
-            }
-
-            let CouchIDs: string[] = await GenerateCouchIDs(AllDissectionData.length);
-            let Dissections: Biostructure[] = await ConstructDissections(CouchIDs, AllDissectionData);
-            let CouchID = await GenerateCouchID();
-            let BioSpecimenItem: WcgopSpecimen = ConstructWcgopSpecimenFromItems(CouchID, SpecimenItemData[j], Species, Dissections, DiscardReason, BioSampleMethod, iCatchID);
-            lstSpecimens.push(BioSpecimenItem);
-        }
-
-        // length frequency data
-        //let SpecimenItemFreqData = await ExecuteOracleSQL(odb, strLengthFrequenciesSQL + iBioSpecimenID)
-        let SpecimenItemFreqData = [];
-
-        if (iBioSpecimenID in dictAllLengthFrequencies) {
-            SpecimenItemFreqData = dictAllLengthFrequencies[iBioSpecimenID];
-        }
-
-        for (let j = 0; j < SpecimenItemFreqData.length; j++) {
-            let CouchID = await GenerateCouchID();
-            let SpecimenFreq: WcgopSpecimen = ConstructWcgopSpecimenFromFreq(CouchID, SpecimenItemFreqData[j], Species, DiscardReason, BioSampleMethod, iCatchID)
-            lstSpecimens.push(SpecimenFreq);
-        }
-
-        let CouchID = await GenerateCouchID();
-        if (lstSpecimens.length == 0) {
-            lstSpecimens = null;
-        }
-        let cCatchSpeciesItem: WcgopCatch = ConstructCatchSpeciesFromBio(CouchID, BioSpecimenData[i], lstSpecimens, Species, DiscardReason);
-        CatchSpecies.push(cCatchSpeciesItem);
-    }
-
-    // CatchSpecies from SpeciesComp
-    //CatchSpeciesData = await ExecuteOracleSQL(odb, strSpeciesCompSQL + iCatchID);
-
-    if (iCatchID in dictAllSpeciesCompositions) {
-        BioSpecimenData = dictAllSpeciesCompositions[iCatchID];
-    } else {
-        BioSpecimenData = [];
-    }
-
-    for (let i = 0; i < BioSpecimenData.length; i++) {
-        let CouchID = await GenerateCouchID();
-        let iSpeciesCompItemId = BioSpecimenData[i][15];
-        //let BasketData = await ExecuteOracleSQL(odb, strSpeciesCompBasketsSQL + iSpeciesCompItemId);
-
-        let Baskets: Basket[];
-        if (iSpeciesCompItemId in dictAllBaskets) {
-            let BasketData = dictAllBaskets[iSpeciesCompItemId];
-            let iNumToGenerate = BasketData.length;
-            let CouchIDs = await GenerateCouchIDs(iNumToGenerate);
-            Baskets = ConstructBaskets(CouchIDs, BasketData);
-        } else {
-            Baskets = null;
-        }
-
-        let Species = await GetDocFromDict(dictSpecies, BioSpecimenData[i][16], 'all-species', 'MainDocs');
-        if (Species != null) {
-            Species = {
-                scientificName: Species.scientificName,
-                commonName: Species.commonName,
-                _id: Species._id
-            }
-        }
-        let DiscardReason = await GetDocFromDict(dictDiscardReasons, BioSpecimenData[i][22], 'discard-reason-lookup', 'LookupDocs');
-        if (DiscardReason != null) {
-            DiscardReason = {
-                description: DiscardReason.description,
-                _id: DiscardReason._id
-            }
-        }
-        let cCatchSpeciesItem: WcgopCatch = ConstructCatchSpeciesFromComp(CouchID, BioSpecimenData[i], Baskets, Species, DiscardReason);
-        CatchSpecies.push(cCatchSpeciesItem);
-    }
-
-    return CatchSpecies
-}
-
-async function BuildContact(odb: any, iContactID: number) {
-    if (iContactID != undefined) {
-        let lstContactData = await ExecuteOracleSQL(odb, strContactSQL + iContactID);
-        lstContactData = lstContactData[0];
-
-        let iContactUserID = lstContactData[1];
-        let iPortID = lstContactData[17];
-        let iUserCreatedByID = lstContactData[22];
-        let iUserModifiedByID = lstContactData[24];
-
-        let ContactUser = iContactUserID // await GetDocFromDict(dictUsers, iContactUserID, 'legacy.userId');    
-        let Port = await GetDocFromDict(dictPorts, iPortID, 'all-ports', 'MainDocs');
-        if (Port != null) {
-            Port.legacy = undefined;
-        }
-        let CreatedBy = iUserCreatedByID // await GetDocFromDict(dictUsers, iUserCreatedByID, 'legacy.userId'); 
-        let ModifiedBy = iUserModifiedByID // await GetDocFromDict(dictUsers, iUserModifiedByID, 'legacy.userId');
-
-        let cContact: Person = await ConstructPerson(lstContactData, ContactUser, Port, CreatedBy, ModifiedBy);
-        return cContact;
-
-    } else {
-        return null;
-    }
-}
-
-async function BuildFishTickets(odb: any, iTripID: number) {
-    if (iTripID != null && iTripID in dictAllFishTickets) {
-        let lstFishTicketData = dictAllFishTickets[iTripID];
-        let lstFishTickets: WcgopFishTicket[] = [];
-        for (let i = 0; i < lstFishTicketData.length; i++) {
-
-            let iUserCreatedByID = lstFishTicketData[i][2];
-            let iUserModifiedByID = lstFishTicketData[i][4];
-
-            let CreatedBy = iUserCreatedByID // await GetDocFromDict(dictUsers, iUserCreatedByID, 'legacy.userId'); 
-            let ModifiedBy = iUserModifiedByID // await GetDocFromDict(dictUsers, iUserModifiedByID, 'legacy.userId');
-
-            let cFishTicket = ConstructFishTicket(lstFishTicketData[i], CreatedBy, ModifiedBy);
-            lstFishTickets.push(cFishTicket);
-        }
-
-        return lstFishTickets;
-
-    } else {
-        return null;
-    }
-}
-
 
 async function BuildSpecies(odb: any, iSpeciesID: number) {
     if (iSpeciesID != undefined) {
@@ -891,324 +216,6 @@ async function BuildSpecies(odb: any, iSpeciesID: number) {
     }
 }
 
-async function BuildLookups(odb: any, strLookupType: string, strType: string, strDateBegin: string, strDateEnd: string, DateCompare: Date, ViewName: string) {
-    let strSQL = oraclesql.NewLookups(strDateBegin, strDateEnd, strLookupType);
-    let LookupData = await ExecuteOracleSQL(odb, strSQL);
-    let lstLookups = [];
-    for (let i = 0; i < LookupData.length; i++) {
-        let strCouchID = await GenerateCouchID();
-        let cLookup = ConstructLookup(LookupData[i], strType);
-
-        let iLookupID = LookupData[i][0]; // TODO
-        let [strDocID, strDocRev] = await QueryLookupView(ViewName, iLookupID);
-
-        if ((cLookup.legacy.obsprodLoadDate > DateCompare || cLookup.createdDate > DateCompare) && strDocID == null) {
-            cLookup._id = strCouchID;
-        }
-        else if (cLookup.updatedDate > DateCompare || strDocID != null) {
-            // Else already exists in couch, recreate it
-            [strDocID, strDocRev] = await QueryLookupView(ViewName, iLookupID);
-            cLookup = JSON.parse(JSON.stringify(cLookup));
-            cLookup._id = strDocID;
-            cLookup._rev = strDocRev;
-        }
-        else {
-            console.log('error, lookup record niether newly updated or created id = ' + iLookupID)
-        }
-        cLookup = RemoveDocNullVals(cLookup);
-        lstLookups.push(cLookup);
-    }
-    return lstLookups;
-
-}
-
-async function BuildMmsbt(iTripID: number): Promise<[SightingEvent[], InteractionEvent[]]> {
-    try {
-
-        if (iTripID != null && iTripID in dictAllSpeciesSightings) {
-
-            let SpeciesSightingData = dictAllSpeciesSightings[iTripID];
-            let lstSightingEvents: SightingEvent[] = [];
-            let lstInteractionEvents: InteractionEvent[] = [];
-
-            for (let i = 0; i < SpeciesSightingData.length; i++) {
-                let SpeciesSightingID = SpeciesSightingData[i][0];
-                let MmsbtItem: InteractionEvent | SightingEvent;
-
-                let Species = await GetDocFromDict(dictSpecies, SpeciesSightingData[i][2], 'all-species', 'MainDocs');
-                if (Species != null) {
-                    Species = {
-                        scientificName: Species.scientificName,
-                        commonName: Species.commonName,
-                        _id: Species._id
-                    }
-                }
-                let Confidence = await GetDocFromDict(dictConfidence, SpeciesSightingData[i][11], 'confidence-lookup', 'LookupDocs');
-                if (Confidence != null) {
-                    Confidence = {
-                        description: Confidence.description,
-                        _id: Confidence._id
-                    }
-                }
-                let BodyLength = await GetDocFromDict(dictBodyLength, SpeciesSightingData[i][12], 'body-length-lookup', 'LookupDocs')
-                if (BodyLength != null) {
-                    BodyLength = {
-                        description: BodyLength.description,
-                        _id: BodyLength._id
-                    }
-                }
-                let SightingCondition = await GetDocFromDict(dictSightingCondition, SpeciesSightingData[i][13], 'sighting-condition-lookup', 'LookupDocs');
-                if (SightingCondition != null) {
-                    SightingCondition = {
-                        description: SightingCondition.description,
-                        _id: SightingCondition._id
-                    }
-                }
-                let BeaufortValue = await GetDocFromDict(dictBeaufort, SpeciesSightingData[i][13], 'beaufort-lookup', 'LookupDocs');
-                if (BeaufortValue != null) {
-                    BeaufortValue = {
-                        description: BeaufortValue.description,
-                        _id: BeaufortValue._id
-                    }
-                }
-                let Outcome = await GetDocFromDict(dictInteractionOutcome, SpeciesSightingData[i][27], 'interaction-outcome-lookup', 'LookupDocs')
-                if (Outcome != null) {
-                    Outcome = {
-                        description: Outcome.description,
-                        _id: Outcome._id
-                    }
-                }
-
-                let lstHaulIDs = [];
-                if (SpeciesSightingData[i][22] != null) {
-                    lstHaulIDs = SpeciesSightingData[i][22].split(',');
-                }
-                let lstHaulCouchIDs: string[] = [];
-                for (let HaulNum = 0; HaulNum < lstHaulIDs.length; HaulNum++) {
-                    let [strDocID,] = await FetchRevID("legacy.operationId", lstHaulIDs[HaulNum], 'all-operations');
-                    lstHaulCouchIDs.push(strDocID);
-                }
-
-                let BehaviorIDs = [];
-                if (SpeciesSightingData[i][28] != null) {
-                    BehaviorIDs = SpeciesSightingData[i][28].split(',');
-                }
-                let Behaviors: Behavior[] = [];
-                for (let BehaveNum = 0; BehaveNum < BehaviorIDs.length; BehaveNum++) {
-                    let docBehavior = await GetDocFromDict(dictInteractionBehaviors, BehaviorIDs[BehaveNum], 'behavior-type-lookup', 'LookupDocs');
-                    if (docBehavior != null) {
-                        docBehavior = {
-                            description: docBehavior.description,
-                            _id: docBehavior._id
-                        }
-                    }
-                    Behaviors.push(docBehavior);
-                }
-
-                // if species_interaction record exists, check if its interaction type was sighting only, build interact or sighting respectively
-                if (SpeciesSightingID in dictAllSpeciesInteractions) {
-                    let InteractionData = dictAllSpeciesInteractions[SpeciesSightingID];
-                    let lstInteractionTypes: InteractionType[] = []
-
-                    for (let j = 0; j < InteractionData.length; j++) {
-                        // if record has interaction type 101 (sighting only), it will be the only record in InteractionData, else get list of interaction types
-                        if (InteractionData[j][2] == 101) {
-                            MmsbtItem = await ConstructSightingEvent(SpeciesSightingData[i], Behaviors, Confidence, BodyLength, SightingCondition, BeaufortValue, Species, lstHaulCouchIDs);
-                            lstSightingEvents.push(MmsbtItem);
-                        } else {
-                            let FishingInteraction = await GetDocFromDict(dictFishingInteraction, InteractionData[j][2], 'interaction-type-lookup', 'LookupDocs');
-                            if (FishingInteraction != null) {
-                                FishingInteraction = {
-                                    description: FishingInteraction.description,
-                                    _id: FishingInteraction._id
-                                }
-                            }
-                            lstInteractionTypes.push(FishingInteraction);
-                        }
-                    }
-                    let Interaction = await ConstructInteractionEvent(lstInteractionTypes, SpeciesSightingData[i], Behaviors, Confidence, BodyLength, SightingCondition, BeaufortValue, Species, lstHaulCouchIDs, Outcome);
-                    lstInteractionEvents.push(Interaction);
-                } else {
-                    let Sighting = await ConstructSightingEvent(SpeciesSightingData[i], Behaviors, Confidence, BodyLength, SightingCondition, BeaufortValue, Species, lstHaulCouchIDs);
-                    lstSightingEvents.push(Sighting)
-                }
-            }
-            if (lstSightingEvents.length == 0) {
-                lstSightingEvents = null;
-            }
-            if (lstInteractionEvents.length == 0) {
-                lstInteractionEvents = null;
-            }
-            let ReturnTuple: [SightingEvent[], InteractionEvent[]] = [lstSightingEvents, lstInteractionEvents]
-            return ReturnTuple
-        } else {
-            return [null, null];
-        }
-
-    } catch (error) {
-        console.log(error)
-    }
-
-
-}
-
-async function BuildProgram(odb: any, iProgramID: number) {
-    if (iProgramID != undefined) {
-        let lstProgramData = await ExecuteOracleSQL(odb, strProgramSQL + iProgramID);
-        lstProgramData = lstProgramData[0];
-        let iUserCreatedByID = lstProgramData[3];
-        let iUserModifiedByID = lstProgramData[5];
-
-        let CreatedBy = iUserCreatedByID // await GetDocFromDict(dictUsers, iUserCreatedByID, 'legacy.userId');
-        let ModifiedBy = iUserModifiedByID // await GetDocFromDict(dictUsers, iUserModifiedByID, 'legacy.userId');
-
-        let cProgram: Program = ConstructProgram(lstProgramData, CreatedBy, ModifiedBy);
-
-        return cProgram;
-    } else {
-        return null;
-    }
-}
-async function BuildPort(odb: any, iPortID: number) {
-    if (iPortID != undefined) {
-        let lstPortData = await ExecuteOracleSQL(odb, strPortSQL + iPortID);
-        lstPortData = lstPortData[0];
-        let iUserCreatedByID = lstPortData[5];
-        let iUserModifiedByID = lstPortData[7];
-
-        let CreatedBy = iUserCreatedByID // await GetDocFromDict(dictUsers, iUserCreatedByID, 'legacy.userId');
-        let ModifiedBy = iUserModifiedByID // await GetDocFromDict(dictUsers, iUserModifiedByID, 'legacy.userId');
-
-        let cPort: Port = ConstructPort(lstPortData, CreatedBy, ModifiedBy);
-        return cPort;
-    } else {
-        return null;
-    }
-}
-
-async function BuildReceiver(odb: any, iReceiverID: number) {
-    if (iReceiverID != null) {
-        let lstReceiverData = await ExecuteOracleSQL(odb, strReceiverSQL + iReceiverID);
-        lstReceiverData = lstReceiverData[0];
-
-
-        let PortID = await ExecuteOracleSQL(odb, 'SELECT PORT_ID FROM OBSPROD.PORTS WHERE IFQ_PORT_CODE = ' + lstReceiverData[5])
-        PortID = PortID[0][0];
-        let ReceiverPort: Port = await GetDocFromDict(dictPorts, PortID, 'all-ports', 'MainDocs');
-        if (ReceiverPort != null) {
-            ReceiverPort.legacy = undefined;
-        }
-        let bActive: boolean;
-
-        if (lstReceiverData[9] == 1) {
-            bActive = true;
-        } else {
-            bActive = false;
-        }
-
-        let NewReceiver: FirstReceiver = {
-            type: FirstReceiverTypeName,
-            dealerName: lstReceiverData[4],
-            dealerNumber: lstReceiverData[3],
-            port: ReceiverPort,
-            createdDate: moment(lstReceiverData[6], moment.ISO_8601).format(),
-            createdBy: lstReceiverData[7],
-            uploadedBy: UploadedBy,
-            uploadedDate: UploadedDate,
-
-            legacy: {
-                ifqDealerId: lstReceiverData[0],
-                agencyId: lstReceiverData[1],
-                receiverNum: lstReceiverData[2],
-                receiverCode: lstReceiverData[8],
-                active: bActive
-            }
-        }
-        return NewReceiver;
-    }
-}
-
-async function BuildTrip(odb: any, iTripID: number, lstHaulIDs: string[]) {
-    // let lstTripData = await ExecuteOracleSQL(odb, strTripSQL + iTripID);
-    // lstTripData = lstTripData[0];
-    let lstTripData = dictAllTrips[iTripID];
-    let iProgramID = lstTripData[3];
-    let iDeparturePortID = lstTripData[6];
-    let iReturnPortID = lstTripData[8];
-    let iVesselID = lstTripData[1];
-    let iUserCreatedByID = lstTripData[13];
-    let iUserModifiedByID = lstTripData[15];
-    let iObserverID = lstTripData[2];
-
-
-    let SpeciesSightings: SightingEvent[] = null;
-    let SpeciesInteractions: InteractionEvent[] = null;
-    //let [, SpeciesInteractions] = await BuildMmsbt(iTripID);
-    [SpeciesSightings, SpeciesInteractions] = await BuildMmsbt(iTripID);
-
-
-    //let HlfcConfig = null;
-    let HlfcConfig: WcgopHlfcConfiguration[] = await BuildHlfc(iTripID);
-
-    //let FishTickets = null;
-    let FishTickets = await BuildFishTickets(odb, iTripID);
-
-    let Fishery = await GetDocFromDict(dictFishery, lstTripData[23], 'fishery-lookup', 'LookupDocs');
-    if (Fishery != null) {
-        Fishery = {
-            description: Fishery.description,
-            _id: Fishery._id
-        }
-    }
-
-
-    let FirstReceiver = await GetDocFromDict(dictFirstReceivers, lstTripData[28], 'first-receiver-lookup', 'LookupDocs');
-    if (FirstReceiver != null) {
-        FirstReceiver.legacy = undefined;
-    }
-
-
-    let IntendedGearType = await GetDocFromDict(dictGearType, lstTripData[36], 'gear-type-lookup', 'LookupDocs')
-    if (IntendedGearType != null) {
-        IntendedGearType = {
-            description: IntendedGearType.description,
-            _id: IntendedGearType._id
-        }
-    }
-
-
-    let Observer = iObserverID // await GetDocFromDict(dictUsers, iObserverID, 'legacy.userId');
-    let CreatedBy = iUserCreatedByID // await GetDocFromDict(dictUsers, iUserCreatedByID, 'legacy.userId');
-    let ModifiedBy = iUserModifiedByID // await GetDocFromDict(dictUsers, iUserModifiedByID, 'legacy.userId');
-    let Program = await GetDocFromDict(dictProgram, iProgramID, 'all-programs', 'MainDocs');
-    if (Program != null) {
-        Program.legacy = undefined;
-    }
-    let DeparturePort = await GetDocFromDict(dictPorts, iDeparturePortID, 'all-ports', 'MainDocs');
-    if (DeparturePort != null) {
-        DeparturePort.legacy = undefined;
-    }
-    let ReturnPort = await GetDocFromDict(dictPorts, iReturnPortID, 'all-ports', 'MainDocs');
-    if (ReturnPort != null) {
-        ReturnPort.legacy = undefined;
-    }
-    let Vessel = await GetDocFromDict(dictVessels, iVesselID, 'all-vessels', 'MainDocs');
-    if (Vessel != null) {
-        Vessel.legacy = undefined;
-    }
-    let TripStatus = await GetDocFromDict(dictTripStatus, lstTripData[5], 'trip-status-lookup', 'LookupDocs')
-
-    if (TripStatus != null) {
-        TripStatus = {
-            description: TripStatus.description,
-            _id: TripStatus._id
-        }
-    }
-    let cTrip: WcgopTrip = ConstructTripWCGOP(lstTripData, CreatedBy, ModifiedBy, Vessel, DeparturePort, ReturnPort, Program, Observer, lstHaulIDs, HlfcConfig, TripStatus, SpeciesSightings, SpeciesInteractions, FishTickets, Fishery, FirstReceiver, IntendedGearType);
-
-    return cTrip
-}
-
 async function BuildTripCertificate(odb: any, iTripCertificate: number) {
     if (iTripCertificate != undefined) {
         let lstTripCertificateData = await ExecuteOracleSQL(odb, strTripCertificateSQL + iTripCertificate);
@@ -1226,29 +233,6 @@ async function BuildTripCertificate(odb: any, iTripCertificate: number) {
         return null;
     }
 }
-
-async function BuildVessel(odb: any, iVesselID: number) {
-    if (iVesselID != undefined) {
-        let lstVesselData = await ExecuteOracleSQL(odb, strVesselSQL + iVesselID);
-        lstVesselData = lstVesselData[0];
-        let iPortID = lstVesselData[1];
-        let iUserCreatedByID = lstVesselData[11];
-        let iUserModifiedByID = lstVesselData[13];
-
-        let Port: Port = await GetDocFromDict(dictPorts, iPortID, 'all-ports', 'MainDocs');
-        if (Port != null) {
-            Port.legacy = undefined;
-        }
-        let CreatedBy = iUserCreatedByID // await GetDocFromDict(dictUsers, iUserCreatedByID, 'legacy.userId');
-        let ModifiedBy = iUserModifiedByID // await GetDocFromDict(dictUsers, iUserModifiedByID, 'legacy.userId');
-
-        let cVessel: Vessel = await ConstructVessel(lstVesselData, CreatedBy, ModifiedBy, Port);
-        return cVessel;
-    } else {
-        return null;
-    }
-}
-
 
 // async function BuildUser(odb: any, iUserID: number){
 //   let lstUserData;
@@ -1381,7 +365,7 @@ async function MigrateLookupDocuments(strPropertyID: string, strDocType: string,
             cDocument._id = strDocID;
             cDocument._rev = strDocRev;
             cDocument = RemoveDocNullVals(cDocument);
-            UpdateDocCouchDB(cDocument);
+            await InsertBulkCouchDB([cDocument]); // todo double check, may just be able to bulk insert with the rest
         }
         else {
             // Should never reach this. 
@@ -1459,7 +443,6 @@ async function MigrateHaulDocuments(strDateBegin: string, strDateEnd: string) {
     await ReleaseOracle(odb);
     return lstNewHaulIDs;
 }
-
 
 // Trip logic is done in two sections. Creation and then modified, unlike hauls where both were done simultaneously. Create is straightforward, update is more complex.
 // The basic logic is that a list of all trips that have been modified (if there are any) are concatenated together with a list (returned from MigrateHauls) 
@@ -1544,14 +527,13 @@ async function MigrateTripDocuments(lstNewTripHauls: any[], strDateBegin: string
             cTrip._rev = strDocRev;
             cTrip = RemoveDocNullVals(cTrip);
             console.log()
-            UpdateDocCouchDB(cTrip);
+            InsertBulkCouchDB([cTrip]);
         }
         else {
             console.log("document doesnt exist, trip id = " + iTripID, "docID = " + strDocID);
         }
     }
 }
-
 
 async function MigrateAllFromLookupTable(strDateBegin: string, strDateEnd: string, DateCompare: Date) {
     let odb = await WcgopConnection();
@@ -1990,7 +972,7 @@ async function Initialize() {
     console.log("Tables loaded into memory")
     console.log(new Date().toLocaleTimeString());
 
-    await CreateViews();
+    await CreateWcgopViews();
 
 
     console.log("Views created, beginning lookup table records")
@@ -2020,7 +1002,7 @@ async function Initialize() {
 
     //   await MigrateLookupDocuments('legacy.vesselId', 'vessel', BuildVessel, DateCompare, strDateCompare, strDateLimit, 'VESSELS', 'VESSEL_ID', 'all-vessels');
 
-    await MigrateLookupDocuments('legacy.contactId', 'contact', BuildContact, DateCompare, strDateCompare, strDateLimit, 'CONTACTS', 'CONTACT_ID', 'all-contacts');
+    // await MigrateLookupDocuments('legacy.contactId', 'contact', BuildContact, DateCompare, strDateCompare, strDateLimit, 'CONTACTS', 'CONTACT_ID', 'all-contacts');
 
     //await MigrateLookupDocuments('vessel_contact_id', 'Vessel_Contact', BuildVesselContact, DateCompare, strDateCompare, strDateLimit, 'VESSEL_CONTACTS', 'VESSEL_CONTACT_ID');
 
@@ -2052,181 +1034,6 @@ async function Initialize() {
 
 }
 
-async function vReplaceVesselsAndContacts() {
-
-    let lstDocsToDelete: any[] = []
-
-    await dbName.view('MainDocs', 'all-vessels', {
-        'include_docs': true
-    }).then((data: any) => {
-        if (data.rows.length > 0) {
-            for (let i = 0; i < data.rows.length; i++) {
-                let newDoc: object = {
-                    _id: data.rows[i].doc._id,
-                    _rev: data.rows[i].doc._rev,
-                    type: 'vessel',
-                    _deleted: true
-                }
-                // let newDoc = data.rows[i].doc;
-                // newDoc._deleted = true;
-                lstDocsToDelete.push(newDoc);
-            }
-        }
-    }).catch((error: any) => {
-        console.log(error);
-    });
-
-
-    await dbName.view('MainDocs', 'all-contacts', {
-        'include_docs': true
-    }).then((data: any) => {
-        if (data.rows.length > 0) {
-            for (let i = 0; i < data.rows.length; i++) {
-                // let newDoc = {
-                //   _id: data.rows[i].doc._id,
-                //   _rev: data.rows[i].doc._rev,
-                //   _deleted: true
-                // }
-                let newDoc = data.rows[i].doc;
-                newDoc._deleted = true;
-                lstDocsToDelete.push(newDoc);
-            }
-        }
-    }).catch((error: any) => {
-        console.log(error);
-    });
-
-    await dbName.bulk({ docs: lstDocsToDelete }).then((body: any) => {
-        console.log(body);
-    });
-
-
-    let connWcgop = await WcgopConnection();
-
-    // let strGetVesselIDs = `
-    //   SELECT DISTINCT VESSEL_ID
-    //   FROM OBSPROD.SELECTION_HISTORY JOIN OBSPROD.SELECTION_PERIODS ON SELECTION_HISTORY.SELECTION_PERIOD_ID = SELECTION_PERIODS.SELECTION_PERIOD_ID
-    //   WHERE 
-    //     SELECTION_PERIODS.START_DATE >= '01-JAN-19' AND
-    //     SELECTION_HISTORY.VESSEL_ID IS NOT NULL
-    //   `;
-
-    let strGetVesselIDs = `
-      SELECT DISTINCT VESSEL_ID
-      FROM OBSPROD.VESSELS
-      `;
-
-    let strGetContactIDs = `
-    SELECT CONTACT_ID
-    FROM OBSPROD.VESSEL_CONTACTS
-    WHERE 
-      VESSEL_CONTACTS.CONTACT_STATUS = 'A' AND 
-      VESSEL_CONTACTS.CONTACT_TYPE IN (1,3)
-    `;
-
-    let strGetActiveVessels = `
-    SELECT DISTINCT VESSEL_ID
-    FROM OBSPROD.VESSEL_CONTACTS
-    WHERE 
-      VESSEL_CONTACTS.CONTACT_STATUS = 'A'
-    `;
-
-    let strGetVesselContactsByContactID = `
-    SELECT VESSEL_ID, CONTACT_STATUS
-    FROM OBSPROD.VESSEL_CONTACTS 
-    WHERE 
-      CONTACT_ID = `;
-
-    let strGetVesselContactsByVesselID = `
-  SELECT VESSEL_ID, CONTACT_STATUS, CONTACT_ID 
-  FROM OBSPROD.VESSEL_CONTACTS 
-  WHERE 
-    CONTACT_ID in (
-      SELECT CONTACT_ID
-      FROM OBSPROD.VESSEL_CONTACTS
-      WHERE 
-        VESSEL_CONTACTS.CONTACT_STATUS = 'A' AND 
-        VESSEL_CONTACTS.CONTACT_TYPE IN (1,3)
-    ) AND
-    VESSEL_ID = `;
-
-    let lstVesselIDs = await ExecuteOracleSQL(connWcgop, strGetVesselIDs);
-    let lstContactIDs = await ExecuteOracleSQL(connWcgop, strGetContactIDs);
-    let lstActiveVessels = await ExecuteOracleSQL(connWcgop, strGetActiveVessels);
-    let lstNewContacts: VesselCaptain[] = [];
-
-    for (let i = 0; i < lstContactIDs.length; i++) {
-        let newContact: any = await BuildContact(connWcgop, lstContactIDs[i]);
-        newContact.isLegacy = true;
-        RemoveDocNullVals(newContact);
-        lstNewContacts.push(newContact);
-    };
-
-    await InsertBulkCouchDB(lstNewContacts);
-    let lstNewVessels: Vessel[] = []
-
-    for (let i = 0; i < lstVesselIDs.length; i++) {
-        let newVessel: any = await BuildVessel(connWcgop, lstVesselIDs[i]);
-        if (newVessel.vesselStatus) {
-            if (newVessel.vesselStatus.description == 'Active') {
-                newVessel.isActive = true;
-            }
-        }
-        // if(lstActiveVessels.indexOf(lstVesselIDs[i]) > -1){
-        //   newVessel.isActive = true;
-        // }
-        let lstVesselContactData = await ExecuteOracleSQL(connWcgop, strGetVesselContactsByVesselID + lstVesselIDs[i]);
-        let lstCaptains: Person[] = [];
-
-        for (let i = 0; i < lstVesselContactData.length; i++) {
-            if (lstVesselContactData[i][1] == 'A') {
-                let objNewCaptain: Person = await GetDocFromDict(dictContacts, lstVesselContactData[i][2], 'all-contacts', 'MainDocs')
-                RemoveDocNullVals(objNewCaptain);
-                lstCaptains.push(objNewCaptain);
-            }
-        }
-        if (lstCaptains.length > 0) {
-            newVessel.captains = lstCaptains;
-        }
-
-        RemoveDocNullVals(newVessel);
-        newVessel._deleted = false;
-        lstNewVessels.push(newVessel);
-    };
-
-    console.log('test')
-    await InsertBulkCouchDB(lstNewVessels);
-
-    // let lstContactsToUpdate: any[] = [];
-    // await dbName.view('MainDocs', 'all-contacts', {
-    //   'include_docs': true
-    // }).then((data: any) => {
-    //   if (data.rows.length > 0){   
-    //     for(let i = 0; i < data.rows.length; i++){
-    //       lstContactsToUpdate.push(data.rows[i].doc);
-    //     }   
-    //   }
-    // }).catch((error: any) => {
-    //   console.log(error);
-    // });
-
-    // for(let i = 0; i < lstContactsToUpdate.length; i++){
-    //   let lstVesselContactData = await ExecuteOracleSQL(connWcgop, strGetVesselContactsByContactID + lstContactsToUpdate[i].legacy.PersonId.toString());
-
-    //   for(let i = 0; i < lstVesselContactData.length; i++){
-    //     if(lstVesselContactData[i][1] == 'A'){
-    //       let objActiveVessel: Vessel = await GetDocFromDict(dictVessels, lstVesselContactData[i][0], 'all-vessels', 'MainDocs')
-    //       lstContactsToUpdate[i].activeVessel = objActiveVessel;
-    //       lstContactsToUpdate[i].isCaptainActive = true;
-    //       break;
-    //     }
-    //   }
-    // }
-
-    // await InsertBulkCouchDB(lstContactsToUpdate);
-    await ReleaseOracle(connWcgop);
-
-}
 
 async function viewtest() {
 
@@ -2272,57 +1079,6 @@ async function viewtest() {
 // Initialize();
 //TestAllDocs();
 //UpdateCouchIndexes();
-
-
-
-async function RemoveEverything() {
-
-    let RemoveAll: any = {
-        "_id": "_design/RemoveAll",
-        "views": {
-            "all-docs": {
-                "map": "function (doc) {\r\n  emit(doc._id, doc._rev);\r\n}"
-            }
-
-        },
-        "language": "javascript"
-    }
-
-    await dbName.get('_design/RemoveAll').then((body: any) => {
-        RemoveAll._rev = body._rev;
-    }).catch((error: any) => {
-    });
-
-
-    await dbName.insert(RemoveAll).then((data: any) => {
-        console.log(data)
-    }).catch((error: any) => {
-        console.log("update failed", error, RemoveAll);
-
-    });
-
-
-    let lstDocsToDelete: any[] = [];
-    await dbName.view('RemoveAll', 'all-docs', {
-        'include_docs': true
-    }).then((data: any) => {
-        if (data.rows.length > 0) {
-            for (let i = 0; i < data.rows.length; i++) {
-                let newDoc = data.rows[i].doc;
-                newDoc._deleted = true;
-                lstDocsToDelete.push(newDoc);
-            }
-        }
-    }).catch((error: any) => {
-        console.log(error);
-    });
-
-    await dbName.bulk({ docs: lstDocsToDelete }).then((body: any) => {
-        console.log(body);
-    });
-
-
-}
 
 
 
