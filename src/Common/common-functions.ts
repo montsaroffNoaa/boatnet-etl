@@ -1,7 +1,5 @@
 import oracledb = require("oracledb");
-
 import { NorpacUser, NorpacPass, IFQUser, IFQPass, DWUser, DWHost, DWInitialDB, DWPass, DWPort } from "../../../dbconnections";
-
 import { strNorpacConnection, strIFQConnection, dbName } from "./db-connection-variables";
 
 const { Pool, Client } = require('pg')
@@ -18,6 +16,7 @@ export async function AshopConnection() {
     });
     return odb
 }
+
 export async function WcgopConnection() {
     let odb = await oracledb.getConnection(
         {
@@ -73,6 +72,7 @@ export async function ReleaseOracle(connection: any) {
                 console.log('Oracle released successfully.')
         });
 }
+
 export async function ExecuteOracleSQL(dbconnection: any, strSQL: string) {
     let aData = await dbconnection.execute(strSQL).catch((error: any) => {
         console.log("oracle query failed", error, strSQL);
@@ -149,7 +149,7 @@ export async function RetrieveEntireViewCouchDB(strDesignName: string, strViewNa
     return lstDocsToReturn
 }
 
-export async function InsertBulkCouchDB(lstDocuments: any) {
+export async function InsertBulkCouchDB(lstDocuments: any[]) {
     let lstDocumentIDs: string[];
     lstDocumentIDs = [];
 
@@ -169,7 +169,7 @@ export function ReplaceAll(str: string, find: string, replace: string) {
     return str.replace(new RegExp(find, 'g'), replace);
 }
 
-export function Transpose(aInput: any) {
+export function Transpose(aInput: any[][]) {
     return Object.keys(aInput[0]).map(function (c) {
         return aInput.map(function (r: any) { return r[c]; });
     });
@@ -185,7 +185,349 @@ export function DmsToDD(iDegrees: number, iMinutes: number, iSeconds: number, st
     }
 }
 
+export async function CreateAshopViews() {
+
+    let LookupDocs: any = {
+        "_id": "_design/ETL-LookupDocs",
+        "views": {
+            "ashop-gear-performance-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-gear-performance') { \r\n    emit(doc.gearPerformanceCode, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-gear-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-gear-type') { \r\n    emit(doc.gearTypeCode.toString() + ',' + doc.gearTypeForm.toString(), doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-port-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-port') { \r\n    emit(doc.portCode, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-vessel-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-vessel-type') { \r\n    emit(doc.vesselType, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-tribal-delivery-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-tribal-delivery') { \r\n    emit(doc.cdqCode, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-species-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-species') { \r\n    emit(doc.speciesCode, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-condition-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-condition') { \r\n    emit(doc.conditionCode, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-sample-system-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-sample-system') { \r\n    emit(doc.sampleSystemCode, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-maturity-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-maturity') { \r\n    emit(doc.maturitySeq, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-specimen-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-specimen-type') { \r\n    emit(doc.specimenType, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-sample-unit-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-sample-unit') { \r\n    emit(doc.sampleUnitCode, doc._rev);\r\n  }\r\n}"
+            },
+            "ashop-animal-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-animal-type') { \r\n    emit(doc.animalTypeCode, doc._rev);\r\n  }\r\n}"
+            }
+        },
+        "language": "javascript"
+    }
+
+    await dbName.get('_design/ETL-LookupDocs').then((body: any) => {
+        LookupDocs._rev = body._rev;
+    }).catch((error: any) => {
+    });
+
+    await dbName.insert(LookupDocs).then((data: any) => {
+        console.log(data)
+    }).catch((error: any) => {
+        console.log("update failed", error, LookupDocs);
+
+    });
+
+    let MainDocs: any = {
+        "_id": "_design/ETL-MainDocs",
+        "views": {
+            "all-operations": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-haul') { \r\n    emit(doc.legacy.cruiseNum.toString() + ',' + doc.legacy.permit.toString() + ',' + doc.legacy.haulSeq.toString(), doc._rev);\r\n  }\r\n}"
+            },
+            "all-cruises": {
+                "map": "function (doc) {\r\n  if (doc.type == 'ashop-cruise') { \r\n    emit(doc.cruiseNum, doc._rev);\r\n  }\r\n}"
+            }
+        },
+        "language": "javascript"
+    }
+
+    await dbName.get('_design/ETL-MainDocs').then((body: any) => {
+        MainDocs._rev = body._rev;
+    }).catch((error: any) => {
+    });
+
+    await dbName.insert(MainDocs).then((data: any) => {
+        console.log(data)
+    }).catch((error: any) => {
+        console.log("update failed", error, MainDocs);
+
+    });
+
+}
+
+export async function CreateWcgopViews() {
+
+    let LookupDocs: any = {
+        "_id": "_design/LookupDocs",
+        "views": {
+            "beaufort-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'beaufort') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "biostructure-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'biostructure-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "discard-reason-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'discard-reason') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "confidence-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'confidence') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "body-length-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'body-length') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "contact-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'contact-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "interaction-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'interaction-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "contact-category-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'contact-category') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "interaction-outcome-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'interaction-outcome') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "relationship-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'relationship') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "trip-status-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'trip-status') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "vessel-status-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'vessel-status') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "vessel-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'vessel-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "waiver-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'waiver-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "waiver-reason-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'waiver-reason-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "weight-method-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'weight-method') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "biospecimen-sample-method-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'biospecimen-sample-method') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "species-sub-category-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'species-sub-category') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "species-category-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'species-category') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "gear-performance-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'gear-performance') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "catch-disposition-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'catch-disposition') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "gear-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'gear-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "sighting-condition-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'sighting-condition') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "fishery-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'fishery') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "first-receiver-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'first-receiver') { \r\n    emit(doc.legacy.ifqDealerId, doc._rev);\r\n  }\r\n}"
+            },
+            "behavior-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'behavior-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "hlfc-mitigation-type-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'hlfc-mitigation-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "hlfc-horizontal-extent-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'hlfc-horizontal-extent') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "hlfc-aerial-extent-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'hlfc-aerial-extent') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            },
+            "hlfc-product-delivery-state-lookup": {
+                "map": "function (doc) {\r\n  if (doc.type == 'hlfc-product-delivery-state') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+            }
 
 
 
+        },
+        "language": "javascript"
+    }
 
+    await dbName.get('_design/LookupDocs').then((body: any) => {
+        LookupDocs._rev = body._rev;
+    }).catch((error: any) => {
+    });
+
+
+    await dbName.insert(LookupDocs).then((data: any) => {
+        console.log(data)
+    }).catch((error: any) => {
+        console.log("update failed", error, LookupDocs);
+
+    });
+
+    let MainDocs: any = {
+        "_id": "_design/MainDocs",
+        "views": {
+            "all-operations": {
+                "map": "function (doc) {\r\n  if (doc.type == 'wcgop-operation') { \r\n    emit(doc.legacy.fishingActivityId, doc._rev);\r\n  }\r\n}"
+            },
+            "all-trips": {
+                "map": "function (doc) {\r\n  if (doc.type == 'wcgop-trip') { \r\n    emit(doc.legacy.tripId, doc._rev);\r\n  }\r\n}"
+            },
+            "all-vessels": {
+                "map": "function (doc) {\r\n  if (doc.type == 'vessel') { \r\n    emit(doc.legacy.vesselId, doc._rev);\r\n  }\r\n}"
+            },
+            "all-contacts": {
+                "map": "function (doc) {\r\n  if (doc.type == 'person') { \r\n    emit(doc.legacy.PersonId, doc._rev);\r\n  }\r\n}"
+            },
+            "all-ports": {
+                "map": "function (doc) {\r\n  if (doc.type == 'port') { \r\n    emit(doc.legacy.portId, doc._rev);\r\n  }\r\n}"
+            },
+            "all-programs": {
+                "map": "function (doc) {\r\n  if (doc.type == 'program') { \r\n    emit(doc.legacy.programId, doc._rev);\r\n  }\r\n}"
+            },
+            "all-species": {
+                "map": "function (doc) {\r\n  if (doc.type == 'species') { \r\n    emit(doc.legacy.speciesId, doc._rev);\r\n  }\r\n}"
+            }
+        },
+        "language": "javascript"
+    }
+
+    await dbName.get('_design/MainDocs').then((body: any) => {
+        MainDocs._rev = body._rev;
+    }).catch((error: any) => {
+    });
+
+    await dbName.insert(MainDocs).then((data: any) => {
+        console.log(data)
+    }).catch((error: any) => {
+        console.log("update failed", error, MainDocs);
+
+    });
+
+
+}
+
+export async function FetchDocument(Key: string, ViewName: string, DesignName: string) {
+    // note: query may return more than one item, this function will always return the first item in the returned
+    // this function assumes whatever calls it, is feeding it a Key that knowingly only has a single associated document
+    let strDocID;
+    let strDocRev;
+    let Document;
+
+    await dbName.view(DesignName, ViewName, {
+        'key': Key,
+        'include_docs': true
+    }).then((data: any) => {
+        if (data.rows.length > 0) {
+            strDocID = data.rows[0].id;
+            strDocRev = data.rows[0].value;
+            Document = data.rows[0].doc
+        }
+    }).catch((error: any) => {
+        console.log(error, DesignName, ViewName);
+    });
+
+
+    return [strDocID, strDocRev, Document];
+}
+
+// Checks if document exists in dictionary instance, if not, fetches from couch and adds to global dict passed in
+export async function GetDocFromDict(dictDocuments: { [id: string ]: any; }, Key: string, ViewName: string, DesignName: string) {
+    let Document;
+    Key = Key.toString();
+    if (Key != null) {
+        if (Key in dictDocuments) {
+            Document = dictDocuments[Key];
+        } else {
+            [, , Document] = await FetchDocument(Key, ViewName, DesignName);
+            dictDocuments[Key] = Document;
+        }
+    } else {
+        Document = null;
+    }
+    return Document;
+}
+
+// Will remove every document from a given database in such a way that deleted docs will all replicate to be deleted elsewhere as well
+async function RemoveEverything() {
+    let RemoveAll: any = {
+        "_id": "_design/RemoveAll",
+        "views": {
+            "all-docs": {
+                "map": "function (doc) {\r\n  emit(doc._id, doc._rev);\r\n}"
+            }
+        },
+        "language": "javascript"
+    }
+
+    await dbName.get('_design/RemoveAll').then((body: any) => {
+        RemoveAll._rev = body._rev;
+    }).catch((error: any) => {
+    });
+
+
+    await dbName.insert(RemoveAll).then((data: any) => {
+        console.log(data)
+    }).catch((error: any) => {
+        console.log("update failed", error, RemoveAll);
+
+    });
+
+    let lstDocsToDelete: any[] = [];
+    await dbName.view('RemoveAll', 'all-docs', {
+        'include_docs': true
+    }).then((data: any) => {
+        if (data.rows.length > 0) {
+            for (let i = 0; i < data.rows.length; i++) {
+                let newDoc = data.rows[i].doc;
+                newDoc._deleted = true;
+                lstDocsToDelete.push(newDoc);
+            }
+        }
+    }).catch((error: any) => {
+        console.log(error);
+    });
+
+    await dbName.bulk({ docs: lstDocsToDelete }).then((body: any) => {
+        console.log(body);
+    });
+
+
+}
+
+
+export async function QueryLookupView(ViewName: string, iLookupID: number) {
+    let strDocID, strDocRev: string;
+    await dbName.view('LookupDocs', ViewName, {
+        'key': iLookupID,
+        'include_docs': true
+    }).then((data: any) => {
+        if (data.rows.length > 0) {
+            strDocID = data.rows[0].id;
+            strDocRev = data.rows[0].value;
+        }
+    }).catch((error: any) => {
+        console.log(error, ViewName, iLookupID);
+    });
+    return [strDocID, strDocRev]
+}
