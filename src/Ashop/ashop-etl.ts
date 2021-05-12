@@ -1,8 +1,10 @@
 import { AllHaulsSQL, AllCruisesSQL, strAllSpeciesSQL } from './norpac-sql';
-import { AshopTrip, AshopCruise } from '../../../boatnet/libs/bn-models/models/ashop/'
-import { ExecuteOracleSQL, InsertBulkCouchDB, ReleaseOracle, RemoveDocNullVals, AshopConnection, CreateAshopViews } from '../Common/common-functions';
-import { BuildHaul, BuildTrip, BuildCruise } from './ashop-build-functions';
+import { ExecuteOracleSQL, InsertBulkCouchDB, ReleaseOracle, RemoveDocNullVals, AshopConnection, CreateAshopViews, CreateMasterViews, RemoveAllFromView } from '../Common/common-functions';
 import { MigrateGearTypeAndPerformance, MigratePorts, MigrateVesselType, MigrateCdqCodes, MigrateCondition, MigrateSampleSystem, MigrateMaturity, MigrateSpecimenType, MigrateSampleUnit, MigrateAnimalTypes } from './build-lookups';
+import { BuildHaul } from './build-haul';
+import { BuildTrip } from './build-trip';
+import { BuildCruise } from './build-cruise';
+import { AshopTrip, AshopCruise, AshopHaul, CouchID } from '@boatnet/bn-models/lib';
 
 // dictionary objects to keep in memory json couch documents that will be often reused
 export var dictPorts: { [id: number]: any; } = {};
@@ -13,10 +15,21 @@ export var dictMaturities: { [id: number]: any; } = {};
 export var dictSampleSystems: { [id: number]: any; } = {};
 export var dictSpecies: { [id: number]: any; } = {};
 export var dictTribalDeliveries: { [id: number]: any; } = {};
+export var dictVessels: { [id: number]: any; } = {};
 export var dictVesselTypes: { [id: number]: any; } = {};
 export var dictSampleUnits: { [id: number]: any; } = {};
 export var dictAnimalTypes: { [id: number]: any; } = {};
 export var dictSpecimenTypes: { [id: number]: any; } = {};
+export var dictTaxonomyAliases: { [id: number]: any; } = {};
+export var dictObservers: { [id: string]: any; } = {}; // id = observer cruise id, not observerseq
+export var dictObserverSeqByCruise: { [id: string]: any; } = {};
+
+export var dictFishingDays: { [id: string]: any; } = {}; // key = 'cruise, trip, permit', value = fishing days
+
+
+
+export var dictMissingTaxonomyIDs: { [id: number]: any; } = {};
+
 
 var moment = require('moment');
 
@@ -25,6 +38,23 @@ var moment = require('moment');
 // this setting disables Node's rejection of invalid or unauthorized certificates, and allows them.
 // process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 // console.log('CouchDB connection configured successfully.');
+
+
+function FishingDaysCalculation(Hauls: AshopHaul[]){
+    let RetrievalDates: any[] = []
+
+    // get all fishing days as plain date format
+    for(let i = 0; i < Hauls.length; i++){
+        let retrievalDate = moment(Hauls[i].endFishingLocation.date).utc().format('YYYY-MM-DD');
+        RetrievalDates.push(retrievalDate)
+    }
+
+    // remove all duplicate dates
+    let uniqueDates = Array.from(new Set(RetrievalDates));
+
+    // return fishing days 
+    return uniqueDates.length
+}
 
 
 async function MigrateHaulDocs(strDateBegin: string, strDateEnd: string) {
@@ -62,8 +92,7 @@ async function MigrateHaulDocs(strDateBegin: string, strDateEnd: string) {
 
         // if this record is new trip, build last haul, bulk insert all hauls, save list of Couch IDs along side Trip ID
         if ((iCruiseID != iLastCruiseID && strPermit != strLastPermit && iTripID != iLastTripID) || i == lstCruiseTripHaulIDs.length - 1) {
-
-            let cHaul = await BuildHaul(odb, iLastCruiseID, iLastHaulID, strLastPermit);
+            let cHaul: AshopHaul = await BuildHaul(odb, iLastCruiseID, iLastHaulID, strLastPermit);
             cHaul = RemoveDocNullVals(cHaul);
             //let [strDocID, strDocRev] = await FetchRevID(cHaul.legacy.cruiseNum + ',' + cHaul.legacy.haulSeq, 'all-operations');
             let strDocID, strDocRev = null;
@@ -75,6 +104,10 @@ async function MigrateHaulDocs(strDateBegin: string, strDateEnd: string) {
                 lstModifiedHauls.push(cHaul);
             }
             lstHaulIDs = await InsertBulkCouchDB(lstCreatedHauls);
+
+            let fishingDays: number = FishingDaysCalculation(lstCreatedHauls);
+
+            dictFishingDays[iLastCruiseID + ',' + iLastTripID + ',' + strLastPermit] = fishingDays;
             // await InsertBulkCouchDB(lstModifiedHauls);
             dictNewHaulIDsByTrip[iLastCruiseID + ',' + strLastPermit + ',' + iLastTripID] = lstHaulIDs;
             lstCreatedHauls = [], lstModifiedHauls = [], lstHaulIDs = [];
@@ -109,7 +142,8 @@ async function MigrateCruises(dictNewHaulIDsByTrip: any, strDateBegin: string, s
     let strLastPermit: string;
     let iCruiseID, iTripID: number;
     let strPermit: string;
-    let lstTrips = [], lstCruises = [];
+    let lstTrips: AshopTrip = []
+    let AllCruisesAndTrips: (AshopTrip | AshopCruise)[] = [];
 
     if (lstCruiseTripIDs.length > 0) {
         iCruiseID = lstCruiseTripIDs[0][0];
@@ -137,11 +171,22 @@ async function MigrateCruises(dictNewHaulIDsByTrip: any, strDateBegin: string, s
             }
             let cTrip: AshopTrip = await BuildTrip(odb, iLastCruiseID, iLastTripID, strLastPermit, lstNewHaulIDs);
             lstTrips.push(cTrip);
-            let cCruise: AshopCruise = await BuildCruise(odb, iLastCruiseID, lstTrips);
-            cCruise = RemoveDocNullVals(cCruise);
-            lstTrips = [];
-            lstCruises.push(cCruise);
 
+            let tripIds: CouchID[] = [];
+
+            for(let j = 0; j < lstTrips.length; j++){
+                tripIds.push(lstTrips[j]._id);
+                lstTrips[j] = RemoveDocNullVals(lstTrips[j]);
+            }
+
+            let cCruise: AshopCruise = await BuildCruise(odb, iLastCruiseID, tripIds);
+            cCruise = RemoveDocNullVals(cCruise);
+            AllCruisesAndTrips.push(cCruise);
+            for(let j = 0; j < lstTrips.length; j++){
+                AllCruisesAndTrips.push(lstTrips[j]);
+            }
+            // AllCruisesAndTrips.concat(lstTrips);
+            lstTrips = [];
         }
         // Else - new trip, same cruise
         else {
@@ -156,9 +201,9 @@ async function MigrateCruises(dictNewHaulIDsByTrip: any, strDateBegin: string, s
             lstTrips.push(cTrip);
         }
     }
-
+ 
     await ReleaseOracle(odb);
-    return await InsertBulkCouchDB(lstCruises);
+    return await InsertBulkCouchDB(AllCruisesAndTrips);
 }
 
 async function MigrateSpecies() {
@@ -191,11 +236,12 @@ async function MigrateSpecies() {
 }
 
 async function MigrateAllLookups() {
+    // await MigratePorts();
+    // await MigrateVesselType();
+    
     await MigrateGearTypeAndPerformance();
-    await MigratePorts();
-    await MigrateVesselType();
     await MigrateCdqCodes();
-    await MigrateSpecies();
+    // await MigrateSpecies();
     await MigrateCondition();
     await MigrateSampleSystem();
     await MigrateMaturity();
@@ -204,7 +250,38 @@ async function MigrateAllLookups() {
     await MigrateAnimalTypes();
 }
 
-async function Initialize() {
+async function FillDictionaries(){
+
+    let odb = await AshopConnection();
+    let strSQL = `
+    SELECT DISTINCT 
+        ATL_HAUL.CRUISE,
+        OLS_OBSERVER.OBSERVER_SEQ
+
+    FROM 
+        NORPAC.ATL_HAUL JOIN
+        NORPAC.ATL_FMA_TRIP ON ATL_HAUL.TRIP_SEQ = ATL_FMA_TRIP.TRIP_SEQ AND ATL_HAUL.PERMIT = ATL_FMA_TRIP.PERMIT AND ATL_HAUL.CRUISE = ATL_FMA_TRIP.CRUISE JOIN
+        NORPAC.ATL_CRUISE_VESSEL ON ATL_FMA_TRIP.CRUISE_VESSEL_SEQ = ATL_CRUISE_VESSEL.CRUISE_VESSEL_SEQ AND ATL_FMA_TRIP.PERMIT = ATL_CRUISE_VESSEL.PERMIT AND ATL_FMA_TRIP.CRUISE = ATL_CRUISE_VESSEL.CRUISE JOIN
+        NORPAC.ATL_OBSERVER_CRUISE ON ATL_CRUISE_VESSEL.CRUISE = ATL_OBSERVER_CRUISE.CRUISE JOIN
+        NORPAC.OLS_OBSERVER_CRUISE ON ATL_OBSERVER_CRUISE.CRUISE = OLS_OBSERVER_CRUISE.CRUISE JOIN
+        NORPAC.OLS_OBSERVER_CONTRACT ON OLS_OBSERVER_CRUISE.CONTRACT_NUMBER = OLS_OBSERVER_CONTRACT.CONTRACT_NUMBER JOIN
+        NORPAC.OLS_OBSERVER ON OLS_OBSERVER_CONTRACT.OBSERVER_SEQ = OLS_OBSERVER.OBSERVER_SEQ
+    
+    WHERE
+        ATL_HAUL.DEPLOY_LATITUDE_DEGREES < 49 AND
+        ATL_HAUL.HAUL_PURPOSE_CODE = 'HAK'`;
+
+    let cruisesAndObserverSeqs: any[] = await ExecuteOracleSQL(odb, strSQL);
+    await ReleaseOracle(odb);
+
+    for(let i = 0; i < cruisesAndObserverSeqs.length; i++){
+        let cruiseId: string = cruisesAndObserverSeqs[0];
+        let observerSeq: string = cruisesAndObserverSeqs[1];
+        dictObserverSeqByCruise[cruiseId] = observerSeq;
+    }
+}
+
+async function InitializeAshopETL() {
     // format = yyy-MM-dd HH24:MI:SS
     // let odb = await AshopConnection();
     // let testdata = await ExecuteOracleSQL(odb, 'SELECT * FROM NORPAC.ATL_HAUL WHERE ROWNUM < 100')
@@ -243,20 +320,55 @@ async function Initialize() {
     // lstTest.push({ testing: 312, testarray: [3, 2, 1] })
     // lstTest.push({ testing: "135", testarray: ["2", 10, true] })
 
-    await CreateAshopViews();
-    await MigrateAllLookups();
+    
+    console.log("Start time:")
 
+
+    // await RemoveAllFromView('ashop-views', 'all-operations');
+    // await RemoveAllFromView('ashop-views', 'all-cruises');
+    // await RemoveAllFromView('ashop-views', 'all-trips');
+
+    console.log(new Date().toLocaleTimeString());
+    await FillDictionaries();
+
+    // await CreateAshopViews();
+    // await MigrateAllLookups();
     // await InsertBulkCouchDB(lstTest);
 
     let strDateCompare = '1000-01-01 00:00:00';
     let DateCompare = new Date(strDateCompare);
-    let strDateLimit = '2019-05-29 12:13:00';
+    let strDateLimit = '2020-5-1 17:40:00';
 
     let dictNewHaulIDsByTrip = await MigrateHaulDocs(strDateCompare, strDateLimit);
+    // let dictNewHaulIDsByTrip = {};
     await MigrateCruises(dictNewHaulIDsByTrip, strDateCompare, strDateLimit);
+
+
+    for(let item in dictMissingTaxonomyIDs){
+        console.log('missing id = ' + item + '. Count = ' + dictMissingTaxonomyIDs[item]);
+    }
+
+    
+    console.log("End time:")
+    console.log(new Date().toLocaleTimeString());
 
 
 }
 
-Initialize();
+InitializeAshopETL();
+
+// CreateMasterViews();
+
+
+
+
+
+// RemoveAllFromView('ETL-MainDocs', 'all-operations');
+
+
+
+
+
+
+
 

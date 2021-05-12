@@ -1,76 +1,76 @@
-import { dbName } from "../Common/db-connection-variables";
-import { WcgopConnection, ExecuteOracleSQL, RemoveDocNullVals, InsertBulkCouchDB, GetDocFromDict, ReleaseOracle } from "../Common/common-functions";
-import { VesselCaptain, Vessel, Person, VesselTypeName, PersonTypeName, Port } from "../../../boatnet/libs/bn-models";
-import { dictContacts, dictVesselStatus, dictContactType, dictContactCategory, dictRelation } from "./wcgop-etl";
+import { couchConnection } from "../Common/db-connection-variables";
+import { WcgopConnection, ExecuteOracleSQL, RemoveDocNullVals, InsertBulkCouchDB, GetDocFromDict, ReleaseOracle } from "../Common/common-functions";import { dictContacts, dictVesselStatus, dictContactType, dictContactCategory, dictRelation } from "./wcgop-etl";
 import { strContactSQL, strVesselSQL } from "./oracle-sql";
 import { dictPorts } from "../Ashop/ashop-etl";
 import moment = require("moment");
-import { BoatnetUser } from "../../../boatnet/libs/bn-auth";
+import { VesselCaptain, Vessel, Person, VesselTypeName, PersonTypeName, Port } from "@boatnet/bn-models/lib";
+import { BoatnetUser } from '@boatnet/bn-auth';
 
 // todo: edit this function for update logic, and split vessels and contacts
 export async function vReplaceVesselsAndContacts() {
     let lstDocsToDelete: any[] = []
 
-    await dbName.view('MainDocs', 'all-vessels', {
-        'include_docs': true
-    }).then((data: any) => {
-        if (data.rows.length > 0) {
-            for (let i = 0; i < data.rows.length; i++) {
-                let newDoc: object = {
-                    _id: data.rows[i].doc._id,
-                    _rev: data.rows[i].doc._rev,
-                    type: 'vessel',
-                    _deleted: true
+    try {
+        await couchConnection.view('wcgop', 'all-vessels', {
+            'include_docs': true
+        }).then((data: any) => {
+            if (data.rows.length > 0) {
+                for (let i = 0; i < data.rows.length; i++) {
+                    let newDoc: object = {
+                        _id: data.rows[i].doc._id,
+                        _rev: data.rows[i].doc._rev,
+                        type: 'vessel',
+                        _deleted: true
+                    }
+                    // let newDoc = data.rows[i].doc;
+                    // newDoc._deleted = true;
+                    lstDocsToDelete.push(newDoc);
                 }
-                // let newDoc = data.rows[i].doc;
-                // newDoc._deleted = true;
-                lstDocsToDelete.push(newDoc);
             }
-        }
-    }).catch((error: any) => {
-        console.log(error);
-    });
+        }).catch((error: any) => {
+            console.log(error);
+        });
 
-    await dbName.view('MainDocs', 'all-contacts', {
-        'include_docs': true
-    }).then((data: any) => {
-        if (data.rows.length > 0) {
-            for (let i = 0; i < data.rows.length; i++) {
-                // let newDoc = {
-                //   _id: data.rows[i].doc._id,
-                //   _rev: data.rows[i].doc._rev,
-                //   _deleted: true
-                // }
-                let newDoc = data.rows[i].doc;
-                newDoc._deleted = true;
-                lstDocsToDelete.push(newDoc);
+        await couchConnection.view('wcgop', 'all-contacts', {
+            'include_docs': true
+        }).then((data: any) => {
+            if (data.rows.length > 0) {
+                for (let i = 0; i < data.rows.length; i++) {
+                    // let newDoc = {
+                    //   _id: data.rows[i].doc._id,
+                    //   _rev: data.rows[i].doc._rev,
+                    //   _deleted: true
+                    // }
+                    let newDoc = data.rows[i].doc;
+                    newDoc._deleted = true;
+                    lstDocsToDelete.push(newDoc);
+                }
             }
-        }
-    }).catch((error: any) => {
-        console.log(error);
-    });
+        }).catch((error: any) => {
+            console.log(error);
+        });
 
-    await dbName.bulk({ docs: lstDocsToDelete }).then((body: any) => {
-        console.log(body);
-    });
+        await couchConnection.bulk({ docs: lstDocsToDelete }).then((body: any) => {
+            console.log(body);
+        });
 
 
-    let connWcgop = await WcgopConnection();
+        let connWcgop = await WcgopConnection();
 
-    // let strGetVesselIDs = `
-    //   SELECT DISTINCT VESSEL_ID
-    //   FROM OBSPROD.SELECTION_HISTORY JOIN OBSPROD.SELECTION_PERIODS ON SELECTION_HISTORY.SELECTION_PERIOD_ID = SELECTION_PERIODS.SELECTION_PERIOD_ID
-    //   WHERE 
-    //     SELECTION_PERIODS.START_DATE >= '01-JAN-19' AND
-    //     SELECTION_HISTORY.VESSEL_ID IS NOT NULL
-    //   `;
+        // let strGetVesselIDs = `
+        //   SELECT DISTINCT VESSEL_ID
+        //   FROM OBSPROD.SELECTION_HISTORY JOIN OBSPROD.SELECTION_PERIODS ON SELECTION_HISTORY.SELECTION_PERIOD_ID = SELECTION_PERIODS.SELECTION_PERIOD_ID
+        //   WHERE 
+        //     SELECTION_PERIODS.START_DATE >= '01-JAN-19' AND
+        //     SELECTION_HISTORY.VESSEL_ID IS NOT NULL
+        //   `;
 
-    let strGetVesselIDs = `
+        let strGetVesselIDs = `
       SELECT DISTINCT VESSEL_ID
       FROM OBSPROD.VESSELS
       `;
 
-    let strGetContactIDs = `
+        let strGetContactIDs = `
     SELECT CONTACT_ID
     FROM OBSPROD.VESSEL_CONTACTS
     WHERE 
@@ -78,20 +78,20 @@ export async function vReplaceVesselsAndContacts() {
       VESSEL_CONTACTS.CONTACT_TYPE IN (1,3)
     `;
 
-    let strGetActiveVessels = `
+        let strGetActiveVessels = `
     SELECT DISTINCT VESSEL_ID
     FROM OBSPROD.VESSEL_CONTACTS
     WHERE 
       VESSEL_CONTACTS.CONTACT_STATUS = 'A'
     `;
 
-    let strGetVesselContactsByContactID = `
+        let strGetVesselContactsByContactID = `
     SELECT VESSEL_ID, CONTACT_STATUS
     FROM OBSPROD.VESSEL_CONTACTS 
     WHERE 
       CONTACT_ID = `;
 
-    let strGetVesselContactsByVesselID = `
+        let strGetVesselContactsByVesselID = `
   SELECT VESSEL_ID, CONTACT_STATUS, CONTACT_ID 
   FROM OBSPROD.VESSEL_CONTACTS 
   WHERE 
@@ -104,81 +104,86 @@ export async function vReplaceVesselsAndContacts() {
     ) AND
     VESSEL_ID = `;
 
-    let lstVesselIDs = await ExecuteOracleSQL(connWcgop, strGetVesselIDs);
-    let lstContactIDs = await ExecuteOracleSQL(connWcgop, strGetContactIDs);
-    let lstActiveVessels = await ExecuteOracleSQL(connWcgop, strGetActiveVessels);
-    let lstNewContacts: VesselCaptain[] = [];
+        let lstVesselIDs = await ExecuteOracleSQL(connWcgop, strGetVesselIDs);
+        let lstContactIDs = await ExecuteOracleSQL(connWcgop, strGetContactIDs);
+        let lstActiveVessels = await ExecuteOracleSQL(connWcgop, strGetActiveVessels);
+        let lstNewContacts: VesselCaptain[] = [];
 
-    for (let i = 0; i < lstContactIDs.length; i++) {
-        let newContact: any = await BuildContact(connWcgop, lstContactIDs[i]);
-        newContact.isLegacy = true;
-        RemoveDocNullVals(newContact);
-        lstNewContacts.push(newContact);
-    };
+        for (let i = 0; i < lstContactIDs.length; i++) {
+            let newContact: any = await BuildContact(connWcgop, lstContactIDs[i]);
+            newContact.isLegacy = true;
+            RemoveDocNullVals(newContact);
+            lstNewContacts.push(newContact);
+        };
 
-    await InsertBulkCouchDB(lstNewContacts);
-    let lstNewVessels: Vessel[] = []
+        await InsertBulkCouchDB(lstNewContacts);
+        let lstNewVessels: Vessel[] = []
 
-    for (let i = 0; i < lstVesselIDs.length; i++) {
-        let newVessel: any = await BuildVessel(connWcgop, lstVesselIDs[i]);
-        if (newVessel.vesselStatus) {
-            if (newVessel.vesselStatus.description == 'Active') {
-                newVessel.isActive = true;
+        for (let i = 0; i < lstVesselIDs.length; i++) {
+            let newVessel: any = await BuildVessel(connWcgop, lstVesselIDs[i]);
+            if (newVessel.vesselStatus) {
+                if (newVessel.vesselStatus.description == 'Active') {
+                    newVessel.isActive = true;
+                }
             }
-        }
-        // if(lstActiveVessels.indexOf(lstVesselIDs[i]) > -1){
-        //   newVessel.isActive = true;
+            // if(lstActiveVessels.indexOf(lstVesselIDs[i]) > -1){
+            //   newVessel.isActive = true;
+            // }
+            let lstVesselContactData = await ExecuteOracleSQL(connWcgop, strGetVesselContactsByVesselID + lstVesselIDs[i]);
+            let lstCaptains: Person[] = [];
+
+            for (let i = 0; i < lstVesselContactData.length; i++) {
+                if (lstVesselContactData[i][1] == 'A') {
+                    let objNewCaptain: Person = await GetDocFromDict(dictContacts, lstVesselContactData[i][2], 'all-contacts', 'wcgop')
+                    RemoveDocNullVals(objNewCaptain);
+                    lstCaptains.push(objNewCaptain);
+                }
+            }
+            if (lstCaptains.length > 0) {
+                newVessel.captains = lstCaptains;
+            }
+
+            RemoveDocNullVals(newVessel);
+            newVessel._deleted = false;
+            lstNewVessels.push(newVessel);
+        };
+
+        console.log('test')
+        await InsertBulkCouchDB(lstNewVessels);
+
+
+
+        // let lstContactsToUpdate: any[] = [];
+        // await dbName.view('MainDocs', 'all-contacts', {
+        //   'include_docs': true
+        // }).then((data: any) => {
+        //   if (data.rows.length > 0){   
+        //     for(let i = 0; i < data.rows.length; i++){
+        //       lstContactsToUpdate.push(data.rows[i].doc);
+        //     }   
+        //   }
+        // }).catch((error: any) => {
+        //   console.log(error);
+        // });
+
+        // for(let i = 0; i < lstContactsToUpdate.length; i++){
+        //   let lstVesselContactData = await ExecuteOracleSQL(connWcgop, strGetVesselContactsByContactID + lstContactsToUpdate[i].legacy.PersonId.toString());
+
+        //   for(let i = 0; i < lstVesselContactData.length; i++){
+        //     if(lstVesselContactData[i][1] == 'A'){
+        //       let objActiveVessel: Vessel = await GetDocFromDict(dictVessels, lstVesselContactData[i][0], 'all-vessels', 'MainDocs')
+        //       lstContactsToUpdate[i].activeVessel = objActiveVessel;
+        //       lstContactsToUpdate[i].isCaptainActive = true;
+        //       break;
+        //     }
+        //   }
         // }
-        let lstVesselContactData = await ExecuteOracleSQL(connWcgop, strGetVesselContactsByVesselID + lstVesselIDs[i]);
-        let lstCaptains: Person[] = [];
 
-        for (let i = 0; i < lstVesselContactData.length; i++) {
-            if (lstVesselContactData[i][1] == 'A') {
-                let objNewCaptain: Person = await GetDocFromDict(dictContacts, lstVesselContactData[i][2], 'all-contacts', 'MainDocs')
-                RemoveDocNullVals(objNewCaptain);
-                lstCaptains.push(objNewCaptain);
-            }
-        }
-        if (lstCaptains.length > 0) {
-            newVessel.captains = lstCaptains;
-        }
-
-        RemoveDocNullVals(newVessel);
-        newVessel._deleted = false;
-        lstNewVessels.push(newVessel);
-    };
-
-    console.log('test')
-    await InsertBulkCouchDB(lstNewVessels);
-
-    // let lstContactsToUpdate: any[] = [];
-    // await dbName.view('MainDocs', 'all-contacts', {
-    //   'include_docs': true
-    // }).then((data: any) => {
-    //   if (data.rows.length > 0){   
-    //     for(let i = 0; i < data.rows.length; i++){
-    //       lstContactsToUpdate.push(data.rows[i].doc);
-    //     }   
-    //   }
-    // }).catch((error: any) => {
-    //   console.log(error);
-    // });
-
-    // for(let i = 0; i < lstContactsToUpdate.length; i++){
-    //   let lstVesselContactData = await ExecuteOracleSQL(connWcgop, strGetVesselContactsByContactID + lstContactsToUpdate[i].legacy.PersonId.toString());
-
-    //   for(let i = 0; i < lstVesselContactData.length; i++){
-    //     if(lstVesselContactData[i][1] == 'A'){
-    //       let objActiveVessel: Vessel = await GetDocFromDict(dictVessels, lstVesselContactData[i][0], 'all-vessels', 'MainDocs')
-    //       lstContactsToUpdate[i].activeVessel = objActiveVessel;
-    //       lstContactsToUpdate[i].isCaptainActive = true;
-    //       break;
-    //     }
-    //   }
-    // }
-
-    // await InsertBulkCouchDB(lstContactsToUpdate);
-    await ReleaseOracle(connWcgop);
+        // await InsertBulkCouchDB(lstContactsToUpdate);
+        await ReleaseOracle(connWcgop);
+    } catch (error) {
+        console.log(error)
+    }
 
 }
 
@@ -193,7 +198,7 @@ async function BuildContact(odb: any, iContactID: number) {
         let iUserModifiedByID = lstContactData[24];
 
         let ContactUser = iContactUserID // await GetDocFromDict(dictUsers, iContactUserID, 'legacy.userId');    
-        let Port = await GetDocFromDict(dictPorts, iPortID, 'all-ports', 'MainDocs');
+        let Port = await GetDocFromDict(dictPorts, iPortID, 'all-ports', 'wcgop');
         if (Port != null) {
             Port.legacy = undefined;
         }
@@ -216,7 +221,7 @@ async function BuildVessel(odb: any, iVesselID: number) {
         let iUserCreatedByID = lstVesselData[11];
         let iUserModifiedByID = lstVesselData[13];
 
-        let Port: Port = await GetDocFromDict(dictPorts, iPortID, 'all-ports', 'MainDocs');
+        let Port: Port = await GetDocFromDict(dictPorts, iPortID, 'all-ports', 'wcgop');
         if (Port != null) {
             Port.legacy = undefined;
         }
@@ -245,7 +250,7 @@ async function ConstructVessel(VesselData: any, CreatedBy: Person, ModifiedBy: P
         UpdatedBy = VesselData[13];
     }
 
-    let VesselType = await GetDocFromDict(dictVesselStatus, VesselData[3], 'vessel-type-lookup', 'LookupDocs');
+    let VesselType = await GetDocFromDict(dictVesselStatus, VesselData[3], 'vessel-type-lookup', 'wcgop');
     if (VesselType != null) {
         VesselType = {
             description: VesselType.description,
@@ -253,7 +258,7 @@ async function ConstructVessel(VesselData: any, CreatedBy: Person, ModifiedBy: P
         }
     }
 
-    let VesselStatus = await GetDocFromDict(dictVesselStatus, VesselData[9], 'vessel-status-lookup', 'LookupDocs');
+    let VesselStatus = await GetDocFromDict(dictVesselStatus, VesselData[9], 'vessel-status-lookup', 'wcgop');
     if (VesselStatus != null) {
         VesselStatus = {
             description: VesselStatus.description,
@@ -308,9 +313,9 @@ async function ConstructPerson(ContactData: any, ContactUser: Person, Port: Port
         UpdatedBy = ContactData[24];
     }
 
-    let ContactType = await GetDocFromDict(dictContactType, ContactData[18], 'contact-type-lookup', 'LookupDocs');
-    let ContactCategory = await GetDocFromDict(dictContactCategory, ContactData[19], 'contact-category-lookup', 'LookupDocs');
-    let RelationToObserver = await GetDocFromDict(dictRelation, ContactData[20], 'relationship-lookup', 'LookupDocs');
+    let ContactType = await GetDocFromDict(dictContactType, ContactData[18], 'contact-type-lookup', 'wcgop');
+    let ContactCategory = await GetDocFromDict(dictContactCategory, ContactData[19], 'contact-category-lookup', 'wcgop');
+    let RelationToObserver = await GetDocFromDict(dictRelation, ContactData[20], 'relationship-lookup', 'wcgop');
 
     let NewPerson: Person = {
         type: PersonTypeName,

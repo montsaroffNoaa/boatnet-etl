@@ -1,0 +1,9 @@
+{
+    "_id": "_design/ole-declarations",
+    "language": "javascript",
+    "views": {
+      "all_ole_vessels": {
+        "map": "function(doc) {\n    if (doc.type == 'olevessel') { \n      if (doc.coastGuardNumber) {\n        emit(doc.coastGuardNumber, 1);\n      } else {\n        emit(doc.stateRegulationNumber, 1);\n      }\n    }\n}"
+      }
+    }
+  }

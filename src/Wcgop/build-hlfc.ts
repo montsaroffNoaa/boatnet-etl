@@ -1,8 +1,8 @@
 import { dictAllHlfc, FetchRevID, dictHlfcProductDelivery, dictHlfcAerialEtent, dictHlfcHorizontalExtent, dictHlfcMitigationTypes } from "./wcgop-etl";
-import { WcgopHlfcConfiguration, Measurement, HlfcProductDeliveryState, HlfcAerialExtent, HlfcHorizontalExtent, HlfcMitigationType, WcgopHlfcConfigurationTypeName } from "../../../boatnet/libs/bn-models";
-import { GetDocFromDict, GenerateCouchID } from "../Common/common-functions";
+import { GetDocFromDict, GenerateCouchID, ConvertToMomentIso8601 } from "../Common/common-functions";
 import moment = require("moment");
 import { UploadedBy, UploadedDate } from "../Common/common-variables";
+import { WcgopHlfcConfiguration, Measurement, HlfcProductDeliveryState, HlfcAerialExtent, HlfcHorizontalExtent, HlfcMitigationType, WcgopHlfcConfigurationTypeName } from "@boatnet/bn-models/lib";
 
 export async function BuildHlfc(iTripID: number) {
 
@@ -45,7 +45,7 @@ export async function BuildHlfc(iTripID: number) {
                 CouchOperationIDs.push(OperationID);
             }
 
-            let ProductDelivery: HlfcProductDeliveryState = await GetDocFromDict(dictHlfcProductDelivery, lstHlfcData[i][3], 'hlfc-product-delivery-state-lookup', 'LookupDocs')
+            let ProductDelivery: HlfcProductDeliveryState = await GetDocFromDict(dictHlfcProductDelivery, lstHlfcData[i][3], 'hlfc-product-delivery-state-lookup', 'wcgop')
 
             if (ProductDelivery != null) {
                 ProductDelivery = {
@@ -53,7 +53,7 @@ export async function BuildHlfc(iTripID: number) {
                     _id: ProductDelivery._id
                 }
             }
-            let AerialExtent: HlfcAerialExtent = await GetDocFromDict(dictHlfcAerialEtent, lstHlfcData[i][13], 'hlfc-aerial-extent-lookup', 'LookupDocs')
+            let AerialExtent: HlfcAerialExtent = await GetDocFromDict(dictHlfcAerialEtent, lstHlfcData[i][13], 'hlfc-aerial-extent-lookup', 'wcgop')
 
             if (AerialExtent != null) {
                 AerialExtent = {
@@ -61,7 +61,7 @@ export async function BuildHlfc(iTripID: number) {
                     _id: AerialExtent._id
                 }
             }
-            let HorizontalExtent: HlfcHorizontalExtent = await GetDocFromDict(dictHlfcHorizontalExtent, lstHlfcData[i][14], 'hlfc-horizontal-extent-lookup', 'LookupDocs')
+            let HorizontalExtent: HlfcHorizontalExtent = await GetDocFromDict(dictHlfcHorizontalExtent, lstHlfcData[i][14], 'hlfc-horizontal-extent-lookup', 'wcgop')
 
             if (HorizontalExtent != null) {
                 HorizontalExtent = {
@@ -77,7 +77,7 @@ export async function BuildHlfc(iTripID: number) {
             }
 
             for (let j = 0; j < lstAvoidance.length; j++) {
-                let MitigationItem = await GetDocFromDict(dictHlfcMitigationTypes, lstAvoidance[j], 'hlfc-mitigation-type-lookup', 'LookupDocs')
+                let MitigationItem = await GetDocFromDict(dictHlfcMitigationTypes, lstAvoidance[j], 'hlfc-mitigation-type-lookup', 'wcgop')
                 if (MitigationItem != null) {
                     MitigationItem = {
                         description: MitigationItem.description,
@@ -125,9 +125,9 @@ function ConstructHLFC(CouchID: string, HlfcData: any, AvgSpeed: Measurement, We
         _id: CouchID,
         type: WcgopHlfcConfigurationTypeName,
         createdBy: HlfcData[16],
-        createdDate: moment(HlfcData[17], moment.ISO_8601).format(),
+        createdDate: ConvertToMomentIso8601(HlfcData[17]),
         updatedBy: HlfcData[18],
-        updatedDate: moment(HlfcData[19], moment.ISO_8601).format(),
+        updatedDate: ConvertToMomentIso8601(HlfcData[19]),
         uploadedBy: UploadedBy,
         uploadedDate: UploadedDate, // uploaded to final CouchDB
         notes: HlfcData[15],

@@ -21,12 +21,15 @@ export async function MigratePorts() {
 
     for (let i = 0; i < PortData.length; i++) {
         let docPort = {
-            type: 'ashop-port',
+            type: 'port',
             portCode: PortData[i][0],
             name: PortData[i][1],
-            state: PortData[i][2]
+            state: PortData[i][2],
+            isAshop: true
         }
-        lstPorts.push(docPort);
+        if(docPort.portCode != 15 && docPort.portCode !=  20){
+            lstPorts.push(docPort);
+        }
     }
 
     await ReleaseOracle(odb);
@@ -35,7 +38,7 @@ export async function MigratePorts() {
 
 export async function MigrateVesselType() {
     let odb = await AshopConnection();
-    let VesselTypeData = await ExecuteOracleSQL(odb, `SELECT VESSEL_TYPE, DESCRIPTION FROM NORPAC.ATL_LOV_VESSEL_TYPE WHERE VESSEL_TYPE IN (SELECT VESSEL_TYPE FROM ATL_HAUL WHERE DEPLOY_LATITUDE_DEGREES < 49)`)
+    let VesselTypeData = await ExecuteOracleSQL(odb, `SELECT VESSEL_TYPE, DESCRIPTION FROM NORPAC.ATL_LOV_VESSEL_TYPE`)
     let lstVesselTypes = [];
 
     for (let i = 0; i < VesselTypeData.length; i++) {
@@ -133,7 +136,7 @@ export async function MigrateCondition() {
 export async function MigrateSampleSystem() {
 
     let odb = await AshopConnection();
-    let SampleSystemData = await ExecuteOracleSQL(odb, `SELECT * FROM ATL_LOV_SAMPLE_SYSTEM_CODE WHERE SAMPLE_SYSTEM_CODE IN ( SELECT SAMPLE_SYSTEM_CODE FROM NORPAC.ATL_HAUL WHERE DEPLOY_LATITUDE_DEGREES < 49)`)
+    let SampleSystemData = await ExecuteOracleSQL(odb, `SELECT SAMPLE_SYSTEM_CODE, DESCRIPTION FROM NORPAC.ATL_LOV_SAMPLE_SYSTEM_CODE`)
     let lstSampleSystems = [];
 
     for (let i = 0; i < SampleSystemData.length; i++) {
@@ -177,8 +180,8 @@ export async function MigrateSpecimenType() {
     for (let i = 0; i < SpecimenType.length; i++) {
         let docNewSpecimenType = {
             type: 'ashop-specimen-type',
-            specimenType: SpecimenType[i][0],
-            isValueRequired: SpecimenType[i][1],
+            maturitySeq: SpecimenType[i][0],
+            code: SpecimenType[i][1],
             description: SpecimenType[i][2]
         }
         lstSpecimenTypes.push(docNewSpecimenType);

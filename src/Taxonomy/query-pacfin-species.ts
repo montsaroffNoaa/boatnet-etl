@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { GetItisTsnsByScientificName, GetFullHierarchyByTsn } from './taxonomy-etl';
 import { GenerateCouchID } from '../Common/common-functions';
-import { Taxonomy } from '../../../boatnet/libs/bn-models';
-import { dbName } from '../Common/db-connection-variables';
+import { couchConnection } from '../Common/db-connection-variables';
+import { Taxonomy } from '@boatnet/bn-models/lib';
 
 const pacfinPrefix = 'https://reports.psmfc.org/pacfin/';
 const pacfinHomePage = pacfinPrefix + 'f?p=501:1000::::::';
@@ -131,7 +131,7 @@ async function processHierarchy(lstHierarchy: any[], strPacfinSpeciesCode: strin
 
         if (bNeedsUpdate) {
             // if document needs to be updated with dw info
-            await dbName.insert(objNewTaxDocument).then((data: any) => {
+            await couchConnection.insert(objNewTaxDocument).then((data: any) => {
                 strParentID = data._id;
                 objNewTaxDocument._rev = data.rev;
                 dictTaxonomyByItisID[iItisID] = objNewTaxDocument;
@@ -143,7 +143,7 @@ async function processHierarchy(lstHierarchy: any[], strPacfinSpeciesCode: strin
             strParentID = strDocID;
         } else {
             // if not exists, create
-            await dbName.insert(objNewTaxDocument).then((data: any) => {
+            await couchConnection.insert(objNewTaxDocument).then((data: any) => {
                 strParentID = data._id;
                 objNewTaxDocument._rev = data.rev;
                 dictTaxonomyByItisID[iItisID] = objNewTaxDocument;
@@ -156,7 +156,7 @@ async function processHierarchy(lstHierarchy: any[], strPacfinSpeciesCode: strin
 
 async function fillTaxonomyDictionary() {
 
-    await dbName.view('Taxonomy', 'taxonomy-by-itisTSN', {
+    await couchConnection.view('Taxonomy', 'taxonomy-by-itisTSN', {
         'include_docs': true
     }).then((data: any) => {
         if (data.rows.length > 0) {

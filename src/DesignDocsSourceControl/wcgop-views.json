@@ -1,0 +1,170 @@
+{
+    "_id": "_design/wcgop",
+    "views": {
+      "all-operations": {
+        "map": "function (doc) {\n  if (doc.type == 'wcgop-operation') { \n    emit(doc._id, doc._rev);\n  }\n}"
+      },
+      "all-trips": {
+        "map": "function (doc) {\r\n  if (doc.type == 'wcgop-trip') { \r\n    emit(doc.legacy.tripId, doc._rev);\r\n  }\r\n}"
+      },
+      "all-vessels": {
+        "map": "function (doc) {\r\n  if (doc.type == 'vessel') { \r\n    emit(doc.legacy.vesselId, doc._rev);\r\n  }\r\n}"
+      },
+      "all-contacts": {
+        "map": "function (doc) {\r\n  if (doc.type == 'person') { \r\n    emit(doc.legacy.PersonId, doc._rev);\r\n  }\r\n}"
+      },
+      "all-ports": {
+        "map": "function (doc) {\r\n  if (doc.type == 'port') { \r\n    emit(doc.legacy.portId, doc._rev);\r\n  }\r\n}"
+      },
+      "all-programs": {
+        "map": "function (doc) {\r\n  if (doc.type == 'program') { \r\n    emit(doc.legacy.programId, doc._rev);\r\n  }\r\n}"
+      },
+      "all-species": {
+        "map": "function (doc) {\r\n  if (doc.type == 'species') { \r\n    emit(doc.legacy.speciesId, doc._rev);\r\n  }\r\n}"
+      },
+      "vessels-by-name": {
+        "map": "function (doc) {\r\n  if (doc.type == 'vessel') { \r\n    emit(doc.vesselName.toUpperCase(), doc._rev);\r\n  }\r\n}"
+      },
+      "all-operations-flattened": {
+        "map": "function(doc) {\r\n    if (doc.type == \"wcgop-trip\") {\r\n        emit([doc._id, 0], null);\r\n        if (doc.operationIDs) {\r\n            for (var i in doc.operationIDs) {\r\n                emit([doc._id, Number(i)+1], {_id: doc.operationIDs[i]});\r\n            }\r\n        }\r\n    }\r\n}"
+      },
+      "all-operations-flat-2018": {
+        "map": "function(doc) {\r\n    if (doc.type == \"wcgop-trip\" && doc.createdDate.substring(0, 4) == \"2018\") {\r\n        emit([doc._id, 0], null);\r\n        if (doc.operationIDs) {\r\n            for (var i in doc.operationIDs) {\r\n                emit([doc._id, Number(i)+1], {_id: doc.operationIDs[i]});\r\n            }\r\n        }\r\n    }\r\n}"
+      },
+      "all-operations-flat-2017": {
+        "map": "function(doc) {\r\n    if (doc.type == \"wcgop-trip\" && doc.createdDate.substring(0, 4) == \"2017\") {\r\n        emit([doc._id, 0], null);\r\n        if (doc.operationIDs) {\r\n            for (var i in doc.operationIDs) {\r\n                emit([doc._id, Number(i)+1], {_id: doc.operationIDs[i]});\r\n            }\r\n        }\r\n    }\r\n}"
+      },
+
+
+
+
+      
+      "beaufort-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'beaufort') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "biostructure-type-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'biostructure-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "discard-reason-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'discard-reason') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "confidence-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'confidence') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "body-length-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'body-length') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "contact-type-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'contact-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "interaction-type-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'interaction-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "contact-category-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'contact-category') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "interaction-outcome-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'interaction-outcome') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "relationship-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'relationship') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "trip-status-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'trip-status') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "vessel-status-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'vessel-status') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "vessel-type-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'vessel-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "waiver-type-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'waiver-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "waiver-reason-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'waiver-reason-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "weight-method-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'weight-method') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "biospecimen-sample-method-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'biospecimen-sample-method') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "species-sub-category-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'species-sub-category') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "species-category-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'species-category') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "gear-performance-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'gear-performance') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "catch-disposition-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'catch-disposition') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "gear-type-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'gear-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "sighting-condition-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'sighting-condition') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "fishery-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'fishery') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "first-receiver-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'first-receiver') { \r\n    emit(doc.legacy.ifqDealerId, doc._rev);\r\n  }\r\n}"
+      },
+      "behavior-type-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'behavior-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "hlfc-mitigation-type-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'hlfc-mitigation-type') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "hlfc-horizontal-extent-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'hlfc-horizontal-extent') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "hlfc-aerial-extent-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'hlfc-aerial-extent') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "hlfc-product-delivery-state-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'hlfc-product-delivery-state') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "maturity-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'maturity') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "viability-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'viability') { \r\n    emit(doc.legacy.lookupVal, doc._rev);\r\n  }\r\n}"
+      },
+      "taxonomy-alias-by-wcgop-id": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy-alias' && doc.isWcgop && doc.aliasType == 'common name' && doc.taxonomy.legacy.wcgopSpeciesId) { \r\n    emit(doc.taxonomy.legacy.wcgopSpeciesId, null);\r\n  }\r\n}"
+      },
+      "observers-by-userid": {
+        "map": "function (doc) {\r\n  if (doc.type == 'person') { \r\n    emit(doc.legacy.userId, doc._rev);\r\n  }\r\n}"
+      },
+      "boatnet-config-lookup": {
+        "map": "function (doc) {\n  if (doc.type === \"boatnet-config\") {\n    emit(doc.survey, doc._id);\n  }\n}"
+      },
+      "non-flow-scale-reason": {
+        "map": "function (doc) {\r\n  if (doc.type == 'non-flow-scale-reason') { \r\n    emit(doc.type, doc.description);\r\n  }\r\n}"
+      },
+      "non-fishing-day-reason-code": {
+        "map": "function (doc) {\r\n  if (doc.type == 'non-fishing-day-reason-code') { \r\n    emit(doc.type, doc.description);\r\n  }\r\n}"
+      },
+      "tribal-delivery-reason-code": {
+        "map": "function (doc) {\r\n  if (doc.type == 'tribal-delivery-reason-code') { \r\n    emit(doc.type, doc.description);\r\n  }\r\n}"
+      },
+      "ashop-lookups": {
+        "map": "function (doc) {\n  if (doc.isAshop && doc.isAshop !== 'boolean') {\n  emit(doc.type, doc.lookupValue);\n  }\n}"
+      },
+      "wcgop-observer-lookup": {
+        "map": "function (doc) {\r\n  if (doc.type == 'person' && doc.isWcgopOBserver == true) { \r\n    emit(doc.legacy.userId, doc._rev);\r\n  }\r\n}"
+      },
+      "captain-lookup": {
+        "map": "function(doc) {\r\n    if (doc.type == \"vessel\") {\r\n        if (doc.captains) {\r\n            for (var i in doc.captains) {\r\n                emit(doc.captains[i].firstName + ' ' + doc.captains[i].lastName, {_id: doc.captains[i]._id});\r\n            }\r\n        }\r\n    }\r\n}"
+      },
+      "wcgop-lookups": {
+        "map": "function (doc) {\n  if (doc.isWcgop && doc.isWcgop !== 'boolean') {\n  emit(doc.type, doc.lookupValue);\n  }\n}"
+      }
+    },
+    "language": "javascript"
+  }

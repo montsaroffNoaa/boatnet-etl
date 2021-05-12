@@ -26,6 +26,7 @@ export function TripTableSQL(strDateBegin: string, strDateEnd: string) {
   return `
   SELECT 
 
+  
     TRIP_ID,
     VESSEL_ID,
     USER_ID,
@@ -84,6 +85,25 @@ export function TripTableSQL(strDateBegin: string, strDateEnd: string) {
       (TRIPS.RECORD_LAST_EDITED_ON_DATE BETWEEN TO_DATE('` + strDateBegin + `', 'yyyy-MM-dd HH24:MI:SS') AND TO_DATE('` + strDateEnd + `', 'yyyy-MM-dd HH24:MI:SS'))
     
       `;
+}
+
+export function TripCertificateTableSQL(){
+  return `
+  SELECT
+
+  TRIP_CERTIFICATE_ID,
+  TRIP_ID,
+  CERTIFICATE_NUMBER,
+  CREATED_DATE,
+  CREATED_BY,
+  MODIFIED_DATE,
+  MODIFIED_BY,
+  CERTIFICATION_ID,
+  RECORD_COMPUTER_LOAD_ON_DATE,
+  RECORD_LAST_EDITED_ON_DATE,
+  DATA_SOURCE
+  
+  FROM OBSPROD.TRIP_CERTIFICATES`;
 }
 
 export function NewLookups(strDateBegin: string, strDateEnd: string, strLookupType: string) {
@@ -992,7 +1012,6 @@ export function SpeciesCompositionsAndItemsTableSQL(strDateBegin: string, strDat
     SPECIES_COMPOSITIONS.RECORD_COMPUTER_LOAD_ON_DATE,
     SPECIES_COMPOSITIONS.RECORD_LAST_EDITED_ON_DATE,
     SPECIES_COMPOSITIONS.DATA_SOURCE,
-
     SPECIES_COMPOSITION_ITEMS.SPECIES_COMP_ITEM_ID,
     SPECIES_COMPOSITION_ITEMS.SPECIES_ID,
     SPECIES_COMPOSITION_ITEMS.SPECIES_COMPOSITION_ID,
@@ -1688,6 +1707,40 @@ export function FishingLocationsTableSQL() {
   ORDER BY FISHING_LOCATIONS.FISHING_ACTIVITY_ID
 
   `;
+}
+
+
+
+
+export function WaiversTableSQL(){
+  return `
+    SELECT
+
+      WAIVERS.WAIVER_ID,
+      WAIVERS.VESSEL_ID,
+      WAIVERS.WAIVER_REASON,
+      WAIVER_TYPE,
+      WAIVERS.ISSUE_DATE,
+      WAIVERS.START_DATE,
+      WAIVERS.END_DATE,
+      WAIVERS.NOTES,
+      WAIVERS.CREATED_BY,
+      WAIVERS.CREATED_DATE,
+      WAIVERS.MODIFIED_BY,
+      WAIVERS.MODIFIED_DATE,
+      WAIVERS.CONTACT_ID,
+      WAIVERS.FISHERY,
+      WAIVERS.CERTIFICATE_NUMBER,
+      WAIVERS.LANDING_PORT_ID,
+      WAIVERS.RECORD_COMPUTER_LOAD_BY_USER,
+      WAIVERS.RECORD_COMPUTER_LOAD_ON_DATE,
+      WAIVERS.RECORD_LAST_EDITED_BY_USER,
+      WAIVERS.RECORD_LAST_EDITED_ON_DATE
+
+    FROM 
+      OBSPROD.WAIVERS;
+  `
+
 }
 
 export var strReceiverSQL = `
@@ -2441,9 +2494,6 @@ SPECIES_NUMBER_KP_ITQ
 RECORD_COMPUTER_LOAD_ON_DATE
 RECORD_LAST_EDITED_ON_DATE
 DATA_SOURCE
-
-
-
 `
 
 

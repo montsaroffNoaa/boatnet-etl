@@ -1,0 +1,21 @@
+{
+    "_id": "_design/optecs-trawl",
+    "views": {
+      "all_vessel_names": {
+        "map": "function(doc) {\n    if (doc.type == 'vessel') { \n      var regNum = (doc.coastGuardNumber ? doc.coastGuardNumber : doc.stateRegulationNumber);\n      emit(doc.vesselName.toLowerCase(), doc.vesselName + ' (' + regNum + ')');\n    }\n}"
+      },
+      "all_port_names": {
+        "map": "function(doc) {\n    if (doc.type == 'port') { \n     const portNameInfo = (doc.code? doc.code + ': ': '') + doc.name + ' (' + doc.state + ')';\n     emit(doc.name.toLowerCase(), portNameInfo);\n    }\n}"
+      },
+      "all_program_names": {
+        "map": "function (doc) {\n  if (doc.type === 'program') {\n    emit(doc.name, doc.description);\n  }\n}"
+      },
+      "all_tally_species": {
+        "map": "function (doc) {\n  if (doc.type === \"tally-species\" && doc.active != 0 && doc.shortCode) {\n    emit(doc.shortCode, { commonName: doc.commonName, scientificName: doc.scientificName});\n  }\n}"
+      },
+      "all-wcgop-operations": {
+        "map": "function (doc) {\n  if (doc.type === 'wcgop-operation') {\n    emit(doc._id, 1)\n  }\n}"
+      }
+    },
+    "language": "javascript"
+  }

@@ -1,12 +1,12 @@
-import { AshopTrip, AshopCruise, AshopCruiseTypeName } from "../../../boatnet/libs/bn-models/models/ashop";
-
 import { ExecuteOracleSQL } from "../Common/common-functions";
 
 import { strCruiseSQL } from "./norpac-sql";
 
 import { UploadedBy, UploadedDate } from "../Common/common-variables";
+import { AshopTrip, AshopCruise, AshopCruiseTypeName, CouchID } from "@boatnet/bn-models/lib";
+import moment = require("moment");
 
-export async function BuildCruise(odb: any, iCruiseID: number, lstTrips: AshopTrip[]) {
+export async function BuildCruise(odb: any, iCruiseID: number, lstTrips: CouchID[]) {
 
     let lstCruiseData = await ExecuteOracleSQL(odb, strCruiseSQL(iCruiseID));
     lstCruiseData = lstCruiseData[0];
@@ -14,7 +14,7 @@ export async function BuildCruise(odb: any, iCruiseID: number, lstTrips: AshopTr
     let docNewCruise: AshopCruise = {
         type: AshopCruiseTypeName,
         createdBy: null,
-        createdDate: lstCruiseData[3],
+        createdDate: moment(lstCruiseData[3], moment.ISO_8601).format(),
         updatedBy: null,
         updatedDate: null,
         uploadedBy: UploadedBy,

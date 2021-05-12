@@ -1,0 +1,13 @@
+{
+    "_id": "_design/TripsApi",
+    "language": "javascript",
+    "views": {
+      "all_api_trips": {
+        "map": "function (doc) {\n  if (doc.type === 'trips-api') {\n    emit(doc.tripNum, 1);\n  }\n}",
+        "reduce": "_stats"
+      },
+      "all_api_catch": {
+        "map": "function (doc) {\n  if (doc.type === 'trips-api-catch') {\n    emit(doc.tripNum, 1);\n  }\n}"
+      }
+    }
+  }

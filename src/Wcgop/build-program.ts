@@ -1,7 +1,7 @@
 import { ExecuteOracleSQL } from "../Common/common-functions";
 import { strProgramSQL } from "./oracle-sql";
-import { Program, Person, ProgramTypeName } from "../../../boatnet/libs/bn-models";
 import moment = require("moment");
+import { Program, Person, ProgramTypeName } from "@boatnet/bn-models/lib";
 
 export async function BuildProgram(odb: any, iProgramID: number) {
     if (iProgramID != undefined) {
