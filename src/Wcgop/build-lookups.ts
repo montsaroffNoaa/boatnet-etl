@@ -1,4 +1,4 @@
-import { ExecuteOracleSQL, GenerateCouchID, RemoveDocNullVals, QueryLookupView } from "../Common/common-functions";
+import { ExecuteOracleSQL, GenerateCouchID, RemoveDocNullVals, QueryLookupView, ConvertToMomentIso8601 } from "../Common/common-functions";
 import moment = require("moment");
 import { NewLookups } from "./oracle-sql";
 
@@ -53,7 +53,7 @@ function ConstructLookup(LookupData: any, strType: string) {
         type: strType,
         description: LookupData[3],
         createdBy: LookupData[4],
-        createdDate: moment(LookupData[5], moment.ISO_8601).format(),
+        createdDate: ConvertToMomentIso8601(LookupData[5]),
         updatedBy: UpdatedBy,
         updatedDate: UpdatedDate,
 

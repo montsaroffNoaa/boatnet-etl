@@ -1,7 +1,7 @@
-import { FishingLocation, FishingLocationTypeName } from "../../../boatnet/libs/bn-models/models/_common/fishing-location";
 import { dictAllFishingLocations } from "./wcgop-etl";
 import moment = require("moment");
 import { GenerateCouchID } from "../Common/common-functions";
+import { FishingLocation, FishingLocationTypeName } from "@boatnet/bn-models/lib";
 
 export async function BuildFishingLocations(odb: any, iHaulID: number) {
     let lstAllFishingLocations: FishingLocation[] = [];

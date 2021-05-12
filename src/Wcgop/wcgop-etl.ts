@@ -1,10 +1,7 @@
 import * as oraclesql from './oracle-sql'
-import { Program, Species, Port, FirstReceiver, FirstReceiverTypeName, BeaufortTypeName, DiscardReasonTypeName, BiostructureTypeTypeName, BodyLengthTypeName, ConfidenceTypeName, ContactTypeTypeName, ContactCategoryTypeName, InteractionTypeTypeName, InteractionOutcomeTypeName, RelationshipTypeName, TripStatusTypeName, VesselTypeTypeName, BiosampleSampleMethodTypeName, SpeciesCategoryTypeName, SpeciesSubCategoryTypeName, GearPerformanceTypeName, CatchDispositionTypeName, VesselCaptain } from '../../../boatnet/libs/bn-models/models';
-import { VesselStatusTypeName, WaiverTypeTypeName, WeightMethodTypeName } from '../../../boatnet/libs/bn-models/models';
-import { ExecuteOracleSQL, RemoveDocNullVals, ReleaseOracle, InsertBulkCouchDB, Transpose, WcgopConnection, CreateWcgopViews, GetDocFromDict } from '../Common/common-functions';
+import { ExecuteOracleSQL, RemoveDocNullVals, ReleaseOracle, InsertBulkCouchDB, Transpose, WcgopConnection, CreateWcgopViews, GetDocFromDict, GenerateCouchID, GenerateCouchIDs, RemoveAllFromView } from '../Common/common-functions';
 import { UploadedBy, UploadedDate, CreatedDate } from '../Common/common-variables';
-import { dbName } from '../Common/db-connection-variables';
-import { ConstructTripCertificate } from './construct-wcgop-objects';
+import { couchConnection, couchDB } from '../Common/db-connection-variables';
 import { BuildTrip } from './build-trip';
 import { BuildHaul } from './build-haul';
 import { BuildCatch } from './build-catch';
@@ -12,6 +9,14 @@ import { BuildPort } from './build-port';
 import { BuildProgram } from './build-program';
 import { BuildLookups } from './build-lookups';
 import { BuildReceiver } from './build-first-receiver';
+import { vReplaceVesselsAndContacts } from './build-vessels-and-contacts';
+import { MigrateAllWcgopObservers } from '../Lookups/observer-etl';
+import { InitializeAllTaxonomyETL } from '../Taxonomy/taxonomy-etl';
+import { WcgopCatchGroupingsETL } from '../CatchGroupings/catch-groupings-etl';
+import { Program, Species, FirstReceiver, BeaufortTypeName, DiscardReasonTypeName, BiostructureTypeTypeName, BodyLengthTypeName, ConfidenceTypeName, ContactTypeTypeName, ContactCategoryTypeName, InteractionTypeTypeName, InteractionOutcomeTypeName, RelationshipTypeName, TripStatusTypeName, VesselStatusTypeName, VesselTypeTypeName, WaiverTypeTypeName, WeightMethodTypeName, BiosampleSampleMethodTypeName, SpeciesCategoryTypeName, SpeciesSubCategoryTypeName, GearPerformanceTypeName, CatchDispositionTypeName } from '@boatnet/bn-models/lib';
+import { BuildAndMigrateWaivers } from './build-wavers';
+
+
 
 var dictCatchCat: { [id: number]: any; } = {};
 var dictUsers: { [id: number]: any; } = {};
@@ -20,8 +25,11 @@ export var dictProgram: { [id: number]: Program; } = {};
 export var dictVessels: { [id: number]: any; } = {};
 export var dictContacts: { [id: number]: any; } = {};
 export var dictDiscardReasons: { [id: number]: any; } = {};
-export var dictSpecies: { [id: number]: any; } = {};
+// export var dictSpecies: { [id: number]: any; } = {};
+export var dictTaxonomyAliases: { [id: number]: any; } = {};
 
+export var dictViability: { [id: number]: any; } = {};
+export var dictMaturity: { [id: number]: any; } = {};
 export var dictRelation: { [id: number]: any; } = {};
 export var dictContactCategory: { [id: number]: any; } = {};
 export var dictContactType: { [id: number]: any; } = {};
@@ -50,6 +58,9 @@ export var dictBeaufort: { [id: number]: any; } = {};
 export var dictFishery: { [id: number]: any; } = {};
 export var dictFirstReceivers: { [id: number]: any; } = {};
 export var dictAllBaskets: { [id: number]: any; } = {};
+export var dictObservers: { [id: number]: any; } = {};
+export var dictWaiverReason: { [id: number]: any; } = {};
+
 
 // ENTIRE TABLES LOADED INTO MEMORY HERE
 // id = table ID, value = array of returned fields (from oraclesql file)
@@ -65,6 +76,8 @@ export var dictAllSpeciesSightingsHaulsXREF: { [id: number]: any; } = {};
 export var dictAllFishTickets: { [id: number]: any; } = {};
 export var dictAllFishingLocations: { [id: number]: any; } = {};
 export var dictAllCatchCategory: { [id: number]: any; } = {};
+export var dictAllTripCertificates: { [id: number]: any; } = {};
+
 
 export var dictAllCatches: { [id: number]: any; } = {};
 export var dictAllHauls: { [id: number]: any; } = {};
@@ -102,7 +115,7 @@ export async function FetchRevID(strProperty: string, iOldID: number, ViewName: 
     let strDocID;
     let strDocRev;
 
-    await dbName.view('MainDocs', ViewName, {
+    await couchConnection.view('wcgop', ViewName, {
         'key': iOldID,
         'include_docs': true
     }).then((data: any) => {
@@ -127,7 +140,7 @@ async function FetchHaulsAndRevID(iOldTripID: number, ViewName: string) {
     let strDocRev;
     let lstHaulIDs;
 
-    await dbName.view('MainDocs', ViewName, {
+    await couchConnection.view('wcgop', ViewName, {
         'key': iOldTripID,
         'include_docs': true
     }).then((data: any) => {
@@ -190,14 +203,14 @@ async function BuildSpecies(odb: any, iSpeciesID: number) {
         let iUserCreatedByID = SpeciesData[5];
         let iUserModifiedByID = SpeciesData[7];
 
-        let SpeciesCategory = await GetDocFromDict(dictSpeciesCategory, SpeciesData[10], 'species-category-lookup', 'LookupDocs')
+        let SpeciesCategory = await GetDocFromDict(dictSpeciesCategory, SpeciesData[10], 'species-category-lookup', 'wcgop')
         if (SpeciesCategory != null) {
             SpeciesCategory = {
                 description: SpeciesCategory.description,
                 _id: SpeciesCategory._id
             }
         }
-        let SpeciesSubCategory = await GetDocFromDict(dictSpeciesSubCategory, SpeciesData[11], 'species-sub-category-lookup', 'LookupDocs')
+        let SpeciesSubCategory = await GetDocFromDict(dictSpeciesSubCategory, SpeciesData[11], 'species-sub-category-lookup', 'wcgop')
         if (SpeciesSubCategory != null) {
             SpeciesSubCategory = {
                 description: SpeciesSubCategory.description,
@@ -210,24 +223,6 @@ async function BuildSpecies(odb: any, iSpeciesID: number) {
         let cSpecies: Species = null;
         // let cSpecies = ConstructSpecies(SpeciesData, SpeciesCategory, SpeciesSubCategory);
         return cSpecies;
-
-    } else {
-        return null;
-    }
-}
-
-async function BuildTripCertificate(odb: any, iTripCertificate: number) {
-    if (iTripCertificate != undefined) {
-        let lstTripCertificateData = await ExecuteOracleSQL(odb, strTripCertificateSQL + iTripCertificate);
-        lstTripCertificateData = lstTripCertificateData[0];
-        let iUserCreatedByID = lstTripCertificateData[4];
-        let iUserModifiedByID = lstTripCertificateData[6];
-
-        let CreatedBy = iUserCreatedByID // await GetDocFromDict(dictUsers, iUserCreatedByID, 'legacy.userId');
-        let ModifiedBy = iUserModifiedByID // await GetDocFromDict(dictUsers, iUserModifiedByID, 'legacy.userId');
-
-        let cTripCertificate = ConstructTripCertificate(lstTripCertificateData, CreatedBy, ModifiedBy);
-        return cTripCertificate;
 
     } else {
         return null;
@@ -334,7 +329,7 @@ async function MigrateReceivers(strDateBegin: string, strDateEnd: string) {
 }
 
 // Function to be used for all look up documents, which Build function to use is passed in as a parameter, making this an easy multi use funtion.
-async function MigrateLookupDocuments(strPropertyID: string, strDocType: string, BuildDocument: Function, DateCompare: Date, strDateBegin: string, strDateEnd: string, strTableName: string, strTableID: string, ViewName: string) {
+export async function MigrateLookupDocuments(strPropertyID: string, strDocType: string, BuildDocument: Function, DateCompare: Date, strDateBegin: string, strDateEnd: string, strTableName: string, strTableID: string, ViewName: string) {
 
     let strSQL: string = oraclesql.AllNewAndModifiedLookups(strTableID, strTableName, strDateBegin, strDateEnd);
     let odb = await WcgopConnection(); // must be done syncronously
@@ -418,6 +413,9 @@ async function MigrateHaulDocuments(strDateBegin: string, strDateEnd: string) {
 
             lstHaulIDs = await InsertBulkCouchDB(lstCreatedHauls);
             await InsertBulkCouchDB(lstModifiedHauls);
+            console.log(lstHaulIDs)
+            console.log(lstModifiedHauls)
+            console.log(lstCreatedHauls)
             lstNewHaulIDs.push([iLastTripID, lstHaulIDs]);
             lstCreatedHauls = [], lstModifiedHauls = [], lstHaulIDs = [], lstCatches = [];
         }
@@ -426,7 +424,7 @@ async function MigrateHaulDocuments(strDateBegin: string, strDateEnd: string) {
             let cHaul = await BuildHaul(odb, iLastHaulID, lstCatches);
             cHaul = RemoveDocNullVals(cHaul);
             let [strDocID, strDocRev] = await FetchRevID("legacy.operationId", cHaul.legacy.fishingActivityId, 'all-operations');
-            if (strDocID == null) {
+            if (true) { //FIX THIS LATER BACK TO strDocID == null
                 lstCreatedHauls.push(cHaul);
             } else {
                 cHaul._id = strDocID;
@@ -623,6 +621,12 @@ async function MigrateAllFromLookupTable(strDateBegin: string, strDateEnd: strin
     Docs = await BuildLookups(odb, 'WAIVER_REASON', 'waiver-reason', strDateBegin, strDateEnd, DateCompare, 'waiver-reason-lookup');
     await InsertBulkCouchDB(Docs);
 
+    Docs = await BuildLookups(odb, 'VIABILITY', 'viability', strDateBegin, strDateEnd, DateCompare, 'viability-lookup');
+    await InsertBulkCouchDB(Docs);
+
+    Docs = await BuildLookups(odb, 'MATURITY', 'maturity', strDateBegin, strDateEnd, DateCompare, 'maturity-lookup');
+    await InsertBulkCouchDB(Docs);
+
     await ReleaseOracle(odb);
 
 }
@@ -650,6 +654,8 @@ async function LoadTablesIntoMemory(strDateBegin: string, strDateEnd: string) {
     let odb = await WcgopConnection();
 
     let DissectionsSQL = oraclesql.DissectionsTableSQL(strDateBegin, strDateEnd);
+    console.log(DissectionsSQL)
+    console.log()
     let DissectionData: any = await ExecuteOracleSQL(odb, DissectionsSQL);
     //FillDictByForeignKey(dictAllDissections, DissectionData, 1);
     for (let i = 0; i < DissectionData.length; i++) {
@@ -876,6 +882,26 @@ async function LoadTablesIntoMemory(strDateBegin: string, strDateEnd: string) {
     HlfcData = null;
 
 
+    
+
+    let TripCertificateSQL: string = oraclesql.TripCertificateTableSQL();
+    let TripCertificateData: any = await ExecuteOracleSQL(odb, TripCertificateSQL);
+    //FillDictByForeignKey(dictAllHlfc, HlfcData, 1);
+    for (let i = 0; i < TripCertificateData.length; i++) {
+        let ForeignKey = TripCertificateData[i][1];
+        if (ForeignKey in dictAllTripCertificates) {
+            dictAllTripCertificates[ForeignKey].push(TripCertificateData[i]);
+        } else {
+            dictAllTripCertificates[ForeignKey] = [TripCertificateData[i]];
+        }
+    }
+
+    console.log('Trip Certificates by trip id dict length = ' + Object.keys(dictAllTripCertificates).length);
+    console.log(new Date().toLocaleTimeString());
+
+    TripCertificateData = null;
+
+
     let CatchesSQL = oraclesql.CatchesTableSQL(strDateBegin, strDateEnd);
     let CatchesData: any = await ExecuteOracleSQL(odb, CatchesSQL);
     FillDictionaryWithTable(dictAllCatches, CatchesData);
@@ -891,64 +917,32 @@ async function LoadTablesIntoMemory(strDateBegin: string, strDateEnd: string) {
     FillDictionaryWithTable(dictAllTrips, TripData);
     TripData = null;
 
-    //let CatchCatSQL = 
-    let CatchCatData: any = await ExecuteOracleSQL(odb, strCatchCategorySQL);
-    FillDictionaryWithTable(dictAllCatchCategory, CatchCatData);
-    CatchCatData = null;
+
+    console.log(dictAllTrips)
+    // //let CatchCatSQL = 
+    // let CatchCatData: any = await ExecuteOracleSQL(odb, strCatchCategorySQL);
+    // FillDictionaryWithTable(dictAllCatchCategory, CatchCatData);
+    // CatchCatData = null;
 
     await ReleaseOracle(odb);
 
 }
 
-async function Initialize() {
-    // format = yyy-MM-dd HH24:MI:SS
+async function InitializeWcgopETL() {
+    // format = yyy-MM-dd HH24:MI:SS is used from the database
 
     // let strDateCompare = '2019-04-19 13:31:00';
     // let DateCompare = new Date(strDateCompare);
     // let strDateLimit = '2019-04-23 9:18:00';
 
-    let strDateCompare = '1000-01-01 00:00:00';
-    let DateCompare = new Date(strDateCompare);
-    let strDateLimit = CreatedDate;
-
-    //'2019-04-17 14:19:00';
-    //   UploadedDate = moment(strDateLimit, moment.ISO_8601).format();
-
-
-
-    // let odb = await WcgopConnection();
-
-    // let testdata = await ExecuteOracleSQL(odb, 'SELECT CREATED_DATE, RECORD_COMPUTER_LOAD_ON_DATE FROM OBSPROD.FISHING_ACTIVITIES WHERE FISHING_ACTIVITY_ID = 150912');
-    // ReleaseOracle(odb);
-
-    // let CreatedDate: string = testdata[0][0];
-    // console.log(CreatedDate);
-    // console.log(moment(CreatedDate, moment.ISO_8601).format())
-    // let ComputerLoadDate: string = testdata[0][1];
-    // console.log(ComputerLoadDate);
-    // console.log(moment(ComputerLoadDate, moment.ISO_8601).format())
-
-
-    // let momentTime = moment('2011-06-26 12:32:03', moment.ISO_8601).format();
-    // let momentString: string;
-    // momentString = momentTime;
-    // console.log(momentTime);
-    // console.log(momentString);
-
-    // console.log();
-
-
-    // let [strDocID, strDocRev, lstCurrentHaulIDs] = await FetchHaulsAndRevID(22089 , 'all-trips');
-
-    // console.log(strDocID);
-    // console.log(strDocRev);
-
-    // let [strDocID, strDocRev, lstCurrentHaulIDs] = await FetchHaulsAndRevID(2147202337, 'all-trips');
-
-    // let Document: any;
-
-    // [,, Document] = await FetchDocument( 31187, 'all-operations', 'MainDocs');
-
+    let strDateCompare: string = '2017-01-01 00:00:00';
+    let DateCompare: Date = new Date(strDateCompare);
+    console.log(CreatedDate);
+    // console.log(moment().toISOString(true))
+    let strDateLimit: string = CreatedDate;
+    //strDateLimit = moment(CreatedDate, moment.ISO_8601).format('YYYY-MM-DD HH:mm:ss');
+    strDateLimit = '2018-01-01 00:00:00';
+    console.log('stop here');
 
     // if (new Date('2014-08-05T18:33:30.069Z') > DateCompare){
     //   console.log('success')
@@ -956,47 +950,34 @@ async function Initialize() {
     //   console.log('no fail')
     // }
 
-    // Document = JSON.stringify(Document);
-    // console.log(Document);
-    // Document = RemoveDocNullVals(Document);
-    // Document = JSON.stringify(Document);
-    // console.log(Document);
-    // 
-
-
-    console.log("Initial start Time: ")
+    console.log("Initializing Wcgop ETL")
+    console.log("Start Time: ")
     console.log(new Date().toLocaleTimeString());
 
+
+    //none of these tables are looips
     await LoadTablesIntoMemory(strDateCompare, strDateLimit);
 
     console.log("Tables loaded into memory")
     console.log(new Date().toLocaleTimeString());
 
-    await CreateWcgopViews();
-
-
     console.log("Views created, beginning lookup table records")
     console.log(new Date().toLocaleTimeString());
 
-    await MigrateAllFromLookupTable(strDateCompare, strDateLimit, DateCompare);
-
-
-    console.log("Lookup records moved, starting migrate on other lookup docs")
-    console.log(new Date().toLocaleTimeString());
 
 
     //await MigrateLookupDocuments('user_id', 'User', BuildUser, DateCompare, strDateCompare, strDateLimit, 'USERS', 'USER_ID');
 
-    await MigrateLookupDocuments('legacy.portId', 'port', BuildPort, DateCompare, strDateCompare, strDateLimit, 'PORTS', 'PORT_ID', 'all-ports');
+    //////await MigrateLookupDocuments('legacy.portId', 'port', BuildPort, DateCompare, strDateCompare, strDateLimit, 'PORTS', 'PORT_ID', 'all-ports');
 
-    let receiverids = await MigrateReceivers(strDateCompare, strDateLimit);
+    //////let receiverids = await MigrateReceivers(strDateCompare, strDateLimit);
     //console.log(receiverids[0], receiverids[1])
 
-    await MigrateLookupDocuments('legacy.speciesId', 'species', BuildSpecies, DateCompare, strDateCompare, strDateLimit, 'SPECIES', 'SPECIES_ID', 'all-species');
+    // await MigrateLookupDocuments('legacy.speciesId', 'species', BuildSpecies, DateCompare, strDateCompare, strDateLimit, 'SPECIES', 'SPECIES_ID', 'all-species');
 
     //await MigrateLookupDocuments('legacy.speciesId', 'species', BuildSpecies, DateCompare, strDateCompare, strDateLimit, 'SPECIES', 'SPECIES_ID', 'all-species');
 
-    await MigrateLookupDocuments('legacy.programId', 'program', BuildProgram, DateCompare, strDateCompare, strDateLimit, 'PROGRAMS', 'PROGRAM_ID', 'all-programs');
+    ////////await MigrateLookupDocuments('legacy.programId', 'program', BuildProgram, DateCompare, strDateCompare, strDateLimit, 'PROGRAMS', 'PROGRAM_ID', 'all-programs');
 
     //await MigrateLookupDocuments('catch_category_id', 'Catch_Category', BuildCatchCategory, DateCompare, strDateCompare, strDateLimit, 'CATCH_CATEGORIES', 'CATCH_CATEGORY_ID');
 
@@ -1008,6 +989,20 @@ async function Initialize() {
 
     //strSQL = `SELECT LOOKUP_ID FROM OBSPROD.LOOKUPS WHERE LOOKUPS.CREATED_DATE >= TO_DATE('` + strDateCompare + `', 'yyyy-MM-dd HH24:MI:SS') OR LOOKUPS.MODIFIED_DATE >= TO_DATE('` + strDateCompare + `', 'yyyy-MM-dd HH24:MI:SS')`;
     //MigrateLookupDocuments('lookup_id', 'Lookup', strSQL, BuildLookup, DateCompare);
+
+
+
+
+
+    // await vReplaceVesselsAndContacts();
+
+    // await MigrateAllWcgopObservers();
+
+    // await BuildAndMigrateWaivers();
+
+
+
+
 
     console.log("Lookup Docs finished at")
     console.log(new Date().toLocaleTimeString());
@@ -1040,7 +1035,7 @@ async function viewtest() {
     let lstDocs: any[] = []
 
     // await dbName.view('optecs_trawl', 'all_vessel_names', {
-    await dbName.view('Taxonomy', 'taxonomy-with-no-children-1', {
+    await couchConnection.view('Taxonomy', 'taxonomy-with-no-children-1', {
         'include_docs': true
     }).then((data: any) => {
         if (data.rows.length > 0) {
@@ -1076,7 +1071,24 @@ async function viewtest() {
 // viewtest();
 
 
-// Initialize();
+
+// RemoveAllFromView('Taxonomy', 'catch-grouping-by-catch-category-id');
+
+// WcgopCatchGroupingsETL();
+
+
+
+//InitializeWcgopETL();
+
+
+
+
+
+
+
+
+
+
 //TestAllDocs();
 //UpdateCouchIndexes();
 

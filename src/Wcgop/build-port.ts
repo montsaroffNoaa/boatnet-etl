@@ -1,7 +1,7 @@
-import { ExecuteOracleSQL } from "../Common/common-functions";
+import { ExecuteOracleSQL, ConvertToMomentIso8601 } from "../Common/common-functions";
 import { strPortSQL } from "./oracle-sql";
-import { Port, Person, PortTypeName } from "../../../boatnet/libs/bn-models";
 import moment = require("moment");
+import { Port, Person, PortTypeName } from "@boatnet/bn-models/lib";
 
 export async function BuildPort(odb: any, iPortID: number) {
     if (iPortID != undefined) {
@@ -41,13 +41,13 @@ function ConstructPort(PortData: any, CreatedBy: Person, ModifiedBy: Person) {
         group: PortData[3],
         state: PortData[4],
         createdBy: PortData[5],
-        createdDate: moment(PortData[6], moment.ISO_8601).format(),
+        createdDate: ConvertToMomentIso8601(PortData[6]), 
         updatedBy: UpdatedBy,
         updatedDate: UpdatedDate,
 
         legacy: {
             portId: PortData[0],
-            obsprodLoadDate: moment(PortData[13], moment.ISO_8601).format(),
+            obsprodLoadDate: ConvertToMomentIso8601(PortData[13]),
             ifqPortId: PortData[9],
             ifqPortCode: PortData[10]
         }

@@ -3,9 +3,12 @@
 var moment = require('moment');
 import * as WebRequest from 'web-request';
 import { getPacfinSpeciesTable } from './query-pacfin-species';
-import { WarehouseConnectionPool, RetrieveEntireViewCouchDB, AshopConnection, ExecuteOracleSQL, WcgopConnection, ReleaseOracle, InsertBulkCouchDB } from '../Common/common-functions';
+import { WarehouseConnectionPool, RetrieveEntireViewCouchDB, AshopConnection, ExecuteOracleSQL, WcgopConnection, ReleaseOracle, InsertBulkCouchDB, RemoveAllFromView, sleep } from '../Common/common-functions';
 import { CreatedBy, UploadedBy } from '../Common/common-variables';
-import { Taxonomy, TaxonomyAlias, TaxonomyAliasTypeName } from '../../../boatnet/libs/bn-models/models';
+// var bnmodels = require('@boatnet/bn-models');
+import { Taxonomy, TaxonomyAliasTypeName, TaxonomyAlias } from '@boatnet/bn-models';
+
+import { titleCase } from "title-case";
 
 // Setting this process var to "0" is extremely unsafe in most situations, use with care.
 // It is unsafe because Node does not like self signed TLS (SSL) certificates, 
@@ -73,13 +76,13 @@ async function FillPacfinSpeciesDictionary() {
     let speciesCode: string = pacfinSpeciesTable[i][0]
     dictPacfinSpecies[speciesCode] = pacfinSpeciesTable[i];
   }
-
 }
 
 async function BeginAsynchETL() {
   //   await CreateViews();
   let WarehousePool: any = await WarehouseConnectionPool();
-  let lstAllTaxDocs: Taxonomy[] = await RetrieveEntireViewCouchDB('Taxonomy', 'taxonomy-by-itisTSN');
+  let lstAllTaxDocs: Taxonomy[] = await RetrieveEntireViewCouchDB('Taxonomy', 'taxonomy-by-itistsn');
+  console.log();
   let connWcgop = await WcgopConnection();
   let connAshop = await AshopConnection();
   await FillPacfinSpeciesDictionary();
@@ -91,7 +94,7 @@ async function BeginAsynchETL() {
   for (let i = 0; i < lstAllTaxDocs.length; i++) {
     try {
       let objTaxonomyDoc: Taxonomy = lstAllTaxDocs[i];
-      // await sleep(100);
+      await sleep(150);
       lstAllPromises.push(EtlAliases(objTaxonomyDoc, WarehousePool, connWcgop, connAshop).catch((error: any) => {
         console.log(error);
       }));
@@ -100,6 +103,8 @@ async function BeginAsynchETL() {
     }
   }
 
+  // await sleep(10000)
+
   await Promise.all(lstAllPromises);
   await ReleaseOracle(connWcgop);
   await ReleaseOracle(connAshop);
@@ -107,13 +112,16 @@ async function BeginAsynchETL() {
 
 }
 
-async function EtlAliases(objTaxonomyDoc: Taxonomy, connWarehouse: any, connWcgop: any, connAshop: any) {
+// CHANGE ANY TYPES BACK TO TAXONOMY STUFF LATER TODO
+async function EtlAliases(objTaxonomyDoc: any, connWarehouse: any, connWcgop: any, connAshop: any) {
 
   let bAshop: boolean = false;
   let bWcgop: boolean = false;
   let bHakeSurvey: boolean = false;
   let bHookAndLineSurvey: boolean = false;
   let bTrawlSurvey: boolean = false;
+
+  let allCommonNames: string[] = [];
 
   let lstAllNewTaxAliasDocs: TaxonomyAlias[] = [];
   // get warehouse common name
@@ -138,23 +146,7 @@ async function EtlAliases(objTaxonomyDoc: Taxonomy, connWarehouse: any, connWcgo
       }
 
       if (objTaxNames.rows[0].common_name && objTaxNames.rows[0].common_name != objTaxNames.rows[0].scientific_name) {
-        let newTaxAlias: TaxonomyAlias = {
-          type: TaxonomyAliasTypeName,
-          createdBy: CreatedBy,
-          createdDate: null,
-          uploadedBy: UploadedBy,
-          uploadedDate: null,
-
-          taxonomy: objTaxonomyDoc,
-          alias: objTaxNames.rows[0].common_name,
-          aliasType: 'common name',
-          isAshop: null,
-          isWcgop: null,
-          isHakeSurvey: bHakeSurvey,
-          isHookAndLineSurvey: bHookAndLineSurvey,
-          isTrawlSurvey: bTrawlSurvey
-        }
-        lstAllNewTaxAliasDocs.push(newTaxAlias);
+        allCommonNames.push(objTaxNames.rows[0].common_name);
       } else {
         // console.log('no common name: dwId = ', objTaxonomyDoc.legacy.dwId[i]);
       }
@@ -169,29 +161,12 @@ async function EtlAliases(objTaxonomyDoc: Taxonomy, connWarehouse: any, connWcgo
     bWcgop = true;
 
     if (lstSpeciesRecord[0] != lstSpeciesRecord[1]) {
-      let newTaxAlias: TaxonomyAlias = {
-        type: TaxonomyAliasTypeName,
-        createdBy: CreatedBy,
-        createdDate: null,
-        uploadedBy: UploadedBy,
-        uploadedDate: null,
-
-        taxonomy: objTaxonomyDoc,
-        alias: lstSpeciesRecord[0],
-        aliasType: 'common name',
-        isAshop: null,
-        isWcgop: bWcgop,
-        isHakeSurvey: null,
-        isHookAndLineSurvey: null,
-        isTrawlSurvey: null
-      }
-      lstAllNewTaxAliasDocs.push(newTaxAlias);
+      allCommonNames.push(lstSpeciesRecord[0])
     }
   }
 
   // get ashop common name
   if (objTaxonomyDoc.legacy.ashopSpeciesId) {
-
     let strSQL: string = 'SELECT COMMON_NAME, SCIENTIFIC_NAME, ITIS_CODE FROM NORPAC.ATL_LOV_SPECIES_CODE WHERE SPECIES_CODE = ' + objTaxonomyDoc.legacy.ashopSpeciesId.toString();
     let lstSpeciesRecord = await ExecuteOracleSQL(connAshop, strSQL);
     lstSpeciesRecord = lstSpeciesRecord[0]
@@ -202,52 +177,25 @@ async function EtlAliases(objTaxonomyDoc: Taxonomy, connWarehouse: any, connWcgo
     }
 
     if (lstSpeciesRecord[0] != lstSpeciesRecord[1]) {
-      let newTaxAlias: TaxonomyAlias = {
-        type: TaxonomyAliasTypeName,
-        createdBy: CreatedBy,
-        createdDate: null,
-        uploadedBy: UploadedBy,
-        uploadedDate: null,
-
-        taxonomy: objTaxonomyDoc,
-        alias: lstSpeciesRecord[0],
-        aliasType: 'common name',
-        isAshop: bAshop,
-        isWcgop: null,
-        isHakeSurvey: null,
-        isHookAndLineSurvey: null,
-        isTrawlSurvey: null
-      }
-      lstAllNewTaxAliasDocs.push(newTaxAlias);
+      allCommonNames.push(lstSpeciesRecord[0])
     }
   }
 
   if (objTaxonomyDoc.pacfinSpeciesCode) {
-
     let speciesRecord: string[] = dictPacfinSpecies[objTaxonomyDoc.pacfinSpeciesCode];
-    let newTaxAlias: TaxonomyAlias = {
-      type: TaxonomyAliasTypeName,
-      createdBy: CreatedBy,
-      createdDate: null,
-      uploadedBy: UploadedBy,
-      uploadedDate: null,
-
-      taxonomy: objTaxonomyDoc,
-      alias: speciesRecord[1],
-      aliasType: 'common name',
-      isAshop: null,
-      isWcgop: null,
-      isHakeSurvey: null,
-      isHookAndLineSurvey: null,
-      isTrawlSurvey: null,
-      isPacfin: true
-    }
-    lstAllNewTaxAliasDocs.push(newTaxAlias);
-
+    allCommonNames.push(speciesRecord[1])
   }
 
-  // get scientific name from taxonomy document
-  let newTaxAlias: TaxonomyAlias = {
+  for(let i = 0; i < allCommonNames.length; i++){
+    
+    allCommonNames[i] = allCommonNames[i].toLocaleLowerCase();
+    allCommonNames[i] = titleCase(allCommonNames[i]);
+  }
+
+  allCommonNames = Array.from(new Set(allCommonNames));
+
+  // TODO type = taxonomy
+  let newTaxAlias: any = {
     type: TaxonomyAliasTypeName,
     createdBy: CreatedBy,
     createdDate: null,
@@ -255,8 +203,7 @@ async function EtlAliases(objTaxonomyDoc: Taxonomy, connWarehouse: any, connWcgo
     uploadedDate: null,
 
     taxonomy: objTaxonomyDoc,
-    alias: objTaxonomyDoc.scientificName,
-    aliasType: 'scientific name',
+    commonNames: allCommonNames,
     isAshop: bAshop,
     isWcgop: bWcgop,
     isHakeSurvey: bHakeSurvey,
@@ -269,7 +216,12 @@ async function EtlAliases(objTaxonomyDoc: Taxonomy, connWarehouse: any, connWcgo
 }
 
 export async function TaxonomyAliasETL() {
-  FillLocalDictionaries();
+  await RemoveAllFromView('Taxonomy', 'all-taxonomy-aliases');
+  await FillLocalDictionaries();
   await BeginAsynchETL();
+
 }
 
+
+
+// TaxonomyAliasETL();

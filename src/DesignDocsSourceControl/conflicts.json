@@ -1,0 +1,9 @@
+{
+  "_id": "_design/conflicts",
+  "views": {
+    "all-conflicts": {
+      "map": "function(doc) {\r\n  if(doc._conflicts) {\r\n    emit(doc._id, doc._conflicts);\r\n  }\r\n}"
+    }
+  },
+  "language": "javascript"
+}

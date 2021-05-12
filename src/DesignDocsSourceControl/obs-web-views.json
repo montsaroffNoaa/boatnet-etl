@@ -1,0 +1,30 @@
+{
+  "_id": "_design/obs-web",
+  "views": {
+    "all_vessels": {
+      "map": "function(doc) {\n    if (doc.type == 'vessel') { \n      emit(doc.vesselName, doc);\n    }\n}"
+    },
+    "em-efp-trips": {
+      "map": "function (doc) {\n  if (doc.type == \"ots-trip\" && doc.fishery) {\n    if (doc.fishery.description == \"Electronic Monitoring EFP\") {\n      emit(doc._id, 1);\n    }\n  }\n}"
+    },
+    "all_doc_types": {
+      "map": "function (doc) {\n  emit(doc.type, 1);\n}",
+      "reduce": "_count"
+    },
+    "all_active_persons": {
+      "map": "function (doc) {\n  if (doc.type === \"person\" && !doc.isLegacy) {\n    emit(doc.apexUserAdminUserName, 1);\n  }\n}"
+    },
+    "all_person_alias": {
+      "map": "function (doc) {\n  if (doc.type === 'person-alias') {\n    emit(doc.userName, 1);\n  } \n}"
+    },
+    "ots_trips_by_vesselId": {
+      "map": "function (doc) {\n  if (doc.type === 'ots-trip') {\n    var vesselId = doc.vessel.coastGuardNumber ? doc.vessel.coastGuardNumber : doc.vessel.stateRegulationNumber;\n    emit(vesselId, 1);\n  }\n}"
+    },
+    "all_persons_by_ashop_id": {
+      "map": "function (doc) {\n  if (doc.type === 'person' && doc.legacy.observerSeq) {\n    emit(doc.legacy.observerSeq, null);\n  }\n}"
+    },
+    "all_permits": {
+      "map": "function (doc) {\n  if(doc.type == 'permit'){\n    emit(doc._id, 1);\n  }\n}"
+    }
+  }
+}

@@ -1,12 +1,9 @@
 import { ExecuteOracleSQL, GetDocFromDict, GenerateCouchID } from "../Common/common-functions";
-
 import { strSpecimensSQL } from "./norpac-sql";
-
 import { dictConditions, dictAnimalTypes, dictSampleSystems } from "./ashop-etl";
-
 import { BuildBiostructures } from "./build-bio-structure";
-
 import { UploadedBy, UploadedDate } from "../Common/common-variables";
+import { Biostructure, SpecimenTypeName, AshopSpecimen } from "@boatnet/bn-models/lib";
 
 export async function BuildSpecimens(odb: any, iCruiseID: number, iCompositionID: number, strPermit: string) {
     // from atl_length table
@@ -26,19 +23,18 @@ export async function BuildSpecimens(odb: any, iCruiseID: number, iCompositionID
             strViability = 'Unknown'
         }
 
-        let Condition = await GetDocFromDict(dictConditions, lstSpecimensData[i][5], 'ETL-LookupDocs', 'ashop-condition-lookup')
-
-        let AnimalType = await GetDocFromDict(dictAnimalTypes, lstSpecimensData[i][7], 'ETL-LookupDocs', 'ashop-animal-type-lookup')
-
-        let SampleSystem = await GetDocFromDict(dictSampleSystems, lstSpecimensData[i][6], 'ETL-LookupDocs', 'ashop-sample-system-lookup')
+        let Condition = await GetDocFromDict(dictConditions, lstSpecimensData[i][5], 'ashop-condition-lookup', 'ashop-views');
+        let AnimalType = await GetDocFromDict(dictAnimalTypes, lstSpecimensData[i][7], 'ashop-animal-type-lookup', 'ashop-views');
+        let SampleSystem = await GetDocFromDict(dictSampleSystems, lstSpecimensData[i][6], 'ashop-sample-system-lookup', 'ashop-views');
 
 
         let iLengthID = lstSpecimensData[i][1];
-        let lstBiostructures: AshopBiostructure[] = await BuildBiostructures(odb, iCruiseID, iLengthID, strPermit);
+        let lstBiostructures: Biostructure[] = await BuildBiostructures(odb, iCruiseID, iLengthID, strPermit);
         let strCouchID = await GenerateCouchID();
         let docNewSpecimen: AshopSpecimen = {
             _id: strCouchID,
-            type: AshopSpecimenTypeName,
+            type: SpecimenTypeName,
+            specimenNumber: i,
             createdBy: null, // todo
             createdDate: null, // todo - query history table, if not exists use DATE_OF_ENTRY
             updatedBy: null, // todo
@@ -47,28 +43,30 @@ export async function BuildSpecimens(odb: any, iCruiseID: number, iCompositionID
             uploadedDate: UploadedDate,
 
             sex: lstSpecimensData[i][9],
-            length: {
-                measurementType: 'length',
-                value: lstSpecimensData[i][10],
-                units: 'cm'
-            },
+            viability: strViability,
+            // length: {
+            //     measurementType: 'length',
+            //     value: lstSpecimensData[i][10],
+            //     units: 'cm'
+            // },
             width: null, // probaby n/a
             weight: null, // stored at higher level?
             lifeStage: null, // n/a?
-            population: null, // n/a?
-            maturity: null, // n/a?
+            // population: null, // n/a?
+            visualMaturity: null, // n/a?
             biostructures: lstBiostructures,
             numSpecimensInBag: null, // n/a?
             location: null, // n/a?
-            protocol: null, // n/a?
-            //specialProjects: null, // n/a? all ashop records have a null in this
+            protocolIndex: null, // n/a?
             frequency: lstSpecimensData[i][11],
-            //mediaData: null, // n/a?
 
             condition: Condition, // lookup
-            animalType: AnimalType,
+            // animalType: AnimalType,
             sampleSystem: SampleSystem, // lookup
-            viability: lstSpecimensData[i][13], // not a lookup?
+
+            
+            //mediaData: null, // n/a?
+            //specialProjects: null, // n/a? all ashop records have a null in this
 
             legacy: {
                 cruiseNum: lstSpecimensData[i][0],

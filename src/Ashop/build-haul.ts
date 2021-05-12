@@ -1,25 +1,33 @@
-import { AshopCatch, AshopHaul, AshopHaulTypeName } from "../../../boatnet/libs/bn-models/models/ashop";
-import { BuildSamples } from "./ashop-build-functions";
 import { ExecuteOracleSQL, DmsToDD, GetDocFromDict } from "../Common/common-functions";
 import { strHaulSQL } from "./norpac-sql";
 import { Point } from "geojson";
 import { dictGearTypes, dictGearPerformances, dictTribalDeliveries, dictSampleSystems, dictSampleUnits, dictVesselTypes } from "./ashop-etl";
 import { UploadedBy, UploadedDate } from "../Common/common-variables";
+import { BuldUnsortedCatchesAndSubcatches } from "./build-catch";
+import { AshopCatch, AshopHaulTypeName, LocationEvent, AshopHaul } from '@boatnet/bn-models/lib';
+import moment = require("moment");
 
 export async function BuildHaul(odb: any, iCruiseID: number, iHaulID: number, strPermit: string) {
-    let docNewSamples: AshopCatch[] = await BuildSamples(odb, iCruiseID, iHaulID, null, strPermit);
+    let docNewSamples: AshopCatch[] = await BuldUnsortedCatchesAndSubcatches(odb, iCruiseID, iHaulID, null, strPermit);
 
     let lstHaulData = await ExecuteOracleSQL(odb, strHaulSQL(iCruiseID, iHaulID, strPermit));
     lstHaulData = lstHaulData[0];
 
-    let geoStartLocation: Point = {
-        type: "Point",
-        coordinates: [DmsToDD(lstHaulData[26], lstHaulData[27], lstHaulData[28], null), DmsToDD(lstHaulData[30], lstHaulData[31], lstHaulData[32], lstHaulData[29])]
-    }
-    let geoEndLocation: Point = {
-        type: "Point",
-        coordinates: [DmsToDD(lstHaulData[17], lstHaulData[18], lstHaulData[19], null), DmsToDD(lstHaulData[21], lstHaulData[22], lstHaulData[23], lstHaulData[20])]
-    }
+    let geoStartLocation: LocationEvent = {
+        ddLocation: {
+            type: "Point",
+            coordinates: [DmsToDD(lstHaulData[26], lstHaulData[27], lstHaulData[28], null), DmsToDD(lstHaulData[30], lstHaulData[31], lstHaulData[32], lstHaulData[29])]
+        },
+        date: moment(lstHaulData[25], moment.ISO_8601).format()
+    } 
+
+    let geoEndLocation: LocationEvent = {
+        ddLocation: {
+            type: "Point",
+            coordinates: [DmsToDD(lstHaulData[17], lstHaulData[18], lstHaulData[19], null), DmsToDD(lstHaulData[21], lstHaulData[22], lstHaulData[23], lstHaulData[20])]
+        },
+        date: moment(lstHaulData[16], moment.ISO_8601).format()
+    } 
 
     // 0.54680664916885
     let FishingDepth = lstHaulData[34];
@@ -31,25 +39,25 @@ export async function BuildHaul(odb: any, iCruiseID: number, iHaulID: number, st
     }
 
     let ObserverEstimatedCatch: any;
-    if (lstHaulData[37] != null) {
+    if (lstHaulData[36] != null) {
         ObserverEstimatedCatch = {
             measurement: {
                 measurementType: 'weight',
-                value: lstHaulData[37],
+                value: lstHaulData[36],
                 units: 'kg'
             },
-            weightMethod: lstHaulData[38] // maybe lookup
+            weightMethod: lstHaulData[37] // maybe lookup
         }
     } else {
         ObserverEstimatedCatch = null;
     }
 
     let VesselEstimatedCatch;
-    if (lstHaulData[36] != null) {
+    if (lstHaulData[35] != null) {
         VesselEstimatedCatch = {
             measurement: {
                 measurementType: 'weight',
-                value: lstHaulData[36],
+                value: lstHaulData[35],
                 units: 'kg'
             },
             weightMethod: null // TODO
@@ -67,12 +75,12 @@ export async function BuildHaul(odb: any, iCruiseID: number, iHaulID: number, st
         OfficialTotalCatch = null;
     }
 
-    let GearType = await GetDocFromDict(dictGearTypes, lstHaulData[10].toString() + ',' + lstHaulData[9].toString(), 'ETL-LookupDocs', 'ashop-gear-type-lookup')
-    let GearPerformance = await GetDocFromDict(dictGearPerformances, lstHaulData[8], 'ETL-LookupDocs', 'ashop-gear-performance-lookup')
-    let TribalDelivery = await GetDocFromDict(dictTribalDeliveries, lstHaulData[4], 'ETL-LookupDocs', 'ashop-tribal-delivery-lookup')
-    let SampleSystem = await GetDocFromDict(dictSampleSystems, lstHaulData[51], 'ETL-LookupDocs', 'ashop-sample-system-lookup');
-    let SampleUnit = await GetDocFromDict(dictSampleUnits, lstHaulData[52], 'ETL-LookupDocs', 'ashop-sample-unit-lookup');
-    let VesselType = await GetDocFromDict(dictVesselTypes, lstHaulData[7], 'ETL-LookupDocs', 'ashop-vessel-type-lookup');
+    let GearType = await GetDocFromDict(dictGearTypes, lstHaulData[10].toString() + ',' + lstHaulData[9].toString(), 'ashop-gear-type-lookup', 'ashop-views')
+    let GearPerformance = await GetDocFromDict(dictGearPerformances, lstHaulData[8],'ashop-gear-performance-lookup', 'ashop-views')
+    let TribalDelivery = await GetDocFromDict(dictTribalDeliveries, lstHaulData[4], 'ashop-tribal-delivery-lookup', 'ashop-views')
+    let SampleSystem = await GetDocFromDict(dictSampleSystems, lstHaulData[51], 'ashop-sample-system-lookup', 'ashop-views');
+    let SampleUnit = await GetDocFromDict(dictSampleUnits, lstHaulData[52], 'ashop-sample-unit-lookup', 'ashop-views');
+    let VesselType = await GetDocFromDict(dictVesselTypes, lstHaulData[7], 'ashop-vessel-type-lookup', 'ashop-views');
 
     let docNewHaul: AshopHaul = {
         type: AshopHaulTypeName,
@@ -96,11 +104,23 @@ export async function BuildHaul(odb: any, iCruiseID: number, iHaulID: number, st
             value: FishingDepth,
             units: 'fathoms'
         },
-        observerEstimatedCatch: ObserverEstimatedCatch,
         vesselEstimatedCatch: VesselEstimatedCatch,
         officialTotalCatch: OfficialTotalCatch,
-        observerEstimatedDiscards: [lstHaulData[38]], // array for going forward data? and missing method
-        totalEstimatedDiscard: null, // unknown
+        // observerEstimatedDiscards: [lstHaulData[38]], // array for going forward data? and missing method
+        observerEstimatedDiscards: [{
+            measurement: {
+                measurementType: 'weight',
+                value: lstHaulData[38],
+                units: 'kilogram'
+            },
+            weightMethod: lstHaulData[37],
+            source: 'norpac'
+        }],
+        totalEstimatedDiscard: {
+            measurementType: 'weight',
+            value: lstHaulData[38],
+            units: 'kilogram'
+        },
         gearType: GearType,
         gearPerformance: GearPerformance,
         mammalMonitorPercent: lstHaulData[47],
@@ -112,6 +132,7 @@ export async function BuildHaul(odb: any, iCruiseID: number, iHaulID: number, st
         vesselType: VesselType,
 
         legacy: {
+            observerEstimatedCatch: ObserverEstimatedCatch,
             cruiseNum: lstHaulData[0],
             permit: lstHaulData[48],
             tripSeq: lstHaulData[6],
