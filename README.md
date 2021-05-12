@@ -27,9 +27,16 @@ Install the npm packages listed. Some of those are currently unused, and need to
 
 **Current Status:**
 
-Building correctly, however the ashop-etl script is broken at the moment, and is currently being fixed. 
+Build failures at the moment due to boatnet-module changes over time. The wcgop-script should be functional as it stands. The ashop-etl script is broken at the moment for unknown reason, and is currently being fixed. 
 
 Some npm packages are out of date and need to be updated, which will probably as usual break everything and need fixing, on the back burner.
 
+A specific branch of boatnet-module needs to be created to keep this repo stable. 
 
 
+
+**IMPORTANT NOTES:**
+
+The wcgop script, as it currently stands this moment, does not create any new look up documents (code is there, only disabled), and requires them to be existing in the database already. This is because it is much easier to run and load/reload Catch data into Couch. 
+
+I have been running various scripts directly through my instance of VSCode, and as such I simply have an Intialize function in the respective etl files, and comment / uncomment them as necessary before running the repo. 
