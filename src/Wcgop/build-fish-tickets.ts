@@ -1,7 +1,7 @@
 import { dictAllFishTickets } from "./wcgop-etl";
-import { WcgopFishTicket } from "../../../boatnet/libs/bn-models";
 import moment = require("moment");
-
+import { WcgopFishTicket } from "@boatnet/bn-models/lib";
+import { ConvertToMomentIso8601 } from "../Common/common-functions";
 
 
 export async function BuildFishTickets(odb: any, iTripID: number) {
@@ -32,9 +32,9 @@ function ConstructFishTicket(FishData: any[], CreatedBy: any, ModifiedBy: any) {
     let NewFishTicket = {
         fishTicketNumber: FishData[1],
         createdBy: CreatedBy,
-        createdDate: moment(FishData[3], moment.ISO_8601).format(),
+        createdDate: ConvertToMomentIso8601(FishData[3]),
         updatedBy: ModifiedBy,
-        updatedDate: moment(FishData[10], moment.ISO_8601).format(),
+        updatedDate: ConvertToMomentIso8601(FishData[10]),
         tripId: FishData[6],
         stateAgency: FishData[7],
         fishTicketDate: FishData[8],
@@ -42,7 +42,7 @@ function ConstructFishTicket(FishData: any[], CreatedBy: any, ModifiedBy: any) {
 
         legacy: {
             fishTicketId: FishData[0],
-            obsprodLoadDate: moment(FishData[9], moment.ISO_8601).format()
+            obsprodLoadDate: ConvertToMomentIso8601(FishData[9])
         }
     }
     return NewFishTicket;

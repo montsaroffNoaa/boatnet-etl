@@ -1,8 +1,8 @@
 
 import { getPacfinSpeciesTable } from '../Taxonomy/query-pacfin-species';
-import { CatchGrouping, Taxonomy, TaxonomyAlias, CatchGroupingTypeName } from '../../../boatnet/libs/bn-models/models';
-import { RetrieveEntireViewCouchDB, ExecuteOracleSQL, InsertBulkCouchDB, ReleasePostgres, WcgopConnection, WarehouseConnectionClient } from '../Common/common-functions';
+import { RetrieveEntireViewCouchDB, ExecuteOracleSQL, InsertBulkCouchDB, ReleasePostgres, WcgopConnection, WarehouseConnectionClient, RemoveAllFromView } from '../Common/common-functions';
 import { CreatedBy, CreatedDate, UploadedBy, UploadedDate } from '../Common/common-variables';
+import { CatchGrouping, Taxonomy, TaxonomyAlias, CatchGroupingTypeName } from '@boatnet/bn-models/lib';
 
 // Setting this process var to "0" is extremely unsafe in most situations, use with care.
 // It is unsafe because Node does not like self signed TLS (SSL) certificates, 
@@ -325,7 +325,7 @@ async function WarehouseCatchGroupingsETL() {
     // 
 }
 
-async function WcgopCatchGroupingsETL() {
+export async function WcgopCatchGroupingsETL() {
     // data parsed from catch categories / species catch categories 
     let dictTaxonomyByWcgopID: { [id: string]: any; } = {};
     let dictTaxonomyAliasByTaxonID: { [id: string]: any; } = {};
@@ -372,7 +372,8 @@ async function WcgopCatchGroupingsETL() {
             definition: 'Wcgop catch category',
 
             legacy: {
-                wcgopCatchCategoryCode: catchCategoryCode
+                wcgopCatchCategoryCode: catchCategoryCode,
+                wcgopCatchCategoryId: catchCategoryID
             }
         }
         docsToBeInserted.push(newCatchGrouping);
@@ -400,9 +401,12 @@ async function OtherCatchGroupings() {
 
 
 export async function CatchGroupingsETL() {
+    await RemoveAllFromView('Taxonomy', 'all-catch-groupings');
     await PacfinCatchGroupingsETL();
     await WarehouseCatchGroupingsETL();
     await WcgopCatchGroupingsETL();
 }
+
+// CatchGroupingsETL()
 
 

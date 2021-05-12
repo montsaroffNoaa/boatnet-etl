@@ -1,0 +1,48 @@
+{
+    "_id": "_design/taxonomy-views",
+    "views": {
+      "taxonomy-by-itisTSN": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy') { \r\n    emit(doc.itisTSN, doc._id);\r\n  }\r\n}"
+      },
+      "taxonomy-get-child-docs": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy') { \r\n    emit(doc.parent, doc._id);\r\n  }\r\n}"
+      },
+      "taxonomy-with-dwid": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy' && doc.legacy.dwId) { \r\n    emit(doc.legacy.dwId, null);\r\n  }\r\n}"
+      },
+      "taxonomy-with-no-children": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy' && !(doc.children)) { \r\n    emit(doc.itisTSN, null);\r\n  }\r\n}"
+      },
+      "all-taxonomy-aliases": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy-alias') { \r\n    emit(doc.alias, null);\r\n  }\r\n}"
+      },
+      "taxonomy-with-pacfin-code": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy') { \r\n    emit(doc.pacfinSpeciesCode, null);\r\n  }\r\n}"
+      },
+      "taxonomy-by-scientific-name": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy') { \r\n    emit(doc.scientificName, null);\r\n  }\r\n}"
+      },
+      "taxonomy-alias-by-taxonomy-id": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy-alias') { \r\n    emit(doc.taxonomy._id, null);\r\n  }\r\n}"
+      },
+      "taxonomy-by-wcgop-id": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy' && doc.legacy.wcgopSpeciesId) { \r\n    emit(doc.legacy.wcgopSpeciesId, null);\r\n  }\r\n}"
+      },
+      "taxonomy-alias-scientific-name-by-taxonomy-id": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy-alias' && doc.aliasType == 'scientific name') { \r\n    emit(doc.taxonomy._id, null);\r\n  }\r\n}"
+      },
+      "all-catch-groupings": {
+        "map": "function (doc) {\r\n  if (doc.type == 'catch-grouping') { \r\n    emit(doc.name, null);\r\n  }\r\n}"
+      },
+      "taxonomy-alias-by-ashop-id": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy-alias' && doc.isAshop && doc.aliasType == 'common name' && doc.taxonomy.legacy.ashopSpeciesId) { \r\n    emit(doc.taxonomy.legacy.ashopSpeciesId, null);\r\n  }\r\n}"
+      },
+      "taxonomy-alias-by-wcgop-id": {
+        "map": "function (doc) {\r\n  if (doc.type == 'taxonomy-alias' && doc.isWcgop && doc.aliasType == 'common name' && doc.taxonomy.legacy.wcgopSpeciesId) { \r\n    emit(doc.taxonomy.legacy.wcgopSpeciesId, null);\r\n  }\r\n}"
+      },
+      "catch-grouping-by-catch-category-id": {
+        "map": "function (doc) {\r\n  if (doc.type == 'catch-grouping' && doc.definition == 'Wcgop catch category') { \r\n    emit(doc.legacy.wcgopCatchCategoryId, null);\r\n  }\r\n}"
+      }
+    },
+    "language": "javascript"
+  }

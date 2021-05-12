@@ -1,0 +1,92 @@
+{
+    "_id": "_design/backups",
+    "views": {
+      "Obs-Web - all_em_efp": {
+        "map": "function(doc) {\n    if (doc.type == 'emefp' \n    // && doc.efpTypes[0].description !== 'Whiting'\n    ) {\n        emit(doc.emEfpNumber, doc.vessel.vesselName);\n    }\n}"
+      },
+      "Obs-Web - all_em_hardware": {
+        "map": "function (doc) {\n  if (doc.type === 'em-hardware')\n  emit(doc._id, doc.name);\n}"
+      },
+      "Obs-Web - all_observered_trips": {
+        "map": "function (doc) {\n  if (doc.type === \"wcgop-trip\"&& doc.observer.userName) {\n    emit(doc.observer.userName, 1);\n  }\n}"
+      },
+      "Obs-Web - all_observer_activities": {
+        "map": "function (doc) {\n  if (doc.type === \"observer-activity\") {\n    emit(doc.observer.userName, 1);\n  }\n}"
+      },
+      "Obs-Web - all_observers": {
+        "map": "function (doc) {\n  if (doc.type === \"person\" && (doc.applicationRoles.indexOf(\"Observer\") !== -1)) {\n    emit(doc._id, 1);\n  }\n}"
+      },
+      "Obs-Web - all_ots_targets": {
+        "map": "function (doc) {\n  if (doc.type === \"ots-target\") {\n    emit(doc._id, doc);\n  }\n}"
+      },
+      "Obs-Web - all_permits": {
+        "map": "function (doc) {\n  if (doc.type === \"permit\") {\n    emit(doc._id, 1);\n  }\n}"
+      },
+      "Obs-Web - all_persons": {
+        "map": "function (doc) {\n  if (doc.type === \"person\" && doc.firstName && doc.lastName) {\n    var name = doc.firstName + doc.lastName\n    emit(name, 1);\n  }\n}"
+      },
+      "Obs-Web - all_phone_number_types": {
+        "map": "function (doc) {\n  if (doc.type === 'phone-number-type') {\n    emit(doc.description, doc.lookupVal);\n  }\n}"
+      },
+      "Obs-Web - all_third_party_reviewers": {
+        "map": "function (doc) {\n  if (doc.type === 'third-party-reviewer') {\n    emit(doc._id, doc.name);\n  }\n}"
+      },
+      "Obs-Web - all_us_states": {
+        "map": "function (doc) {\n  if (doc.type === 'us-state') {\n    emit(doc._id, 1);\n  }\n}"
+      },
+      "Obs-Web - all_usernames": {
+        "map": "function (doc) {\n  if (doc.type === \"person\" && doc.firstName && doc.lastName) {\n    emit(doc.apexUserAdminUserName, 1);\n  }\n}"
+      },
+      "Obs-Web - efp_type_options": {
+        "map": "function(doc) {\n    if (doc.type == 'efp-type') { \n      emit(doc.description, doc);\n    }\n}"
+      },
+      "Obs-Web - gear_type_options": {
+        "map": "function(doc) {\n    if (doc.type == 'gear-type') { \n      emit(doc.description, doc);\n    }\n}"
+      },
+      "Obs-Web - ots_target_trips": {
+        "map": "function (doc) {\n  if (doc.type == 'OTSTarget') {\n    emit([doc.value, 0], doc);\n  }\n  if (doc.type == 'OTSTrip') {\n    emit([doc.value, 0], doc)\n  }\n}"
+      },
+      "Obs-Web - reg_num": {
+        "map": "function(doc) {\n    if (doc.type == 'vessel') { \n      var regNum = (doc.coastGuardNumber ? doc.coastGuardNumber : doc.stateRegulationNumber)\n      emit(regNum, doc.vesselName);\n    }\n}"
+      },
+      "Obs-Web - searchable_vessels": {
+        "map": "function (doc) {\n  var i;\n  if (doc.type === 'vessel' && doc.vesselName) {\n    for (i = 0; i < doc.vesselName.length; i += 1) {\n      emit(doc.vesselName.slice(i), doc);\n    }\n  }\n  emit(doc._id, 1);\n}"
+      },
+      "Obs-Web - sector_options": {
+        "map": "function(doc) {\n    if (doc.type == 'sector-type') { \n      emit(doc.description, doc);\n    }\n}"
+      },
+      "Obs-Web - vessel_captains": {
+        "map": "function (doc) {\n    if (doc.type == 'vessel' && doc.captains.length > 0) {\n      var vesselId = doc.coastGuardNumber ? doc.coastGuardNumber : doc.stateRegulationNumber;\n      emit(vesselId, doc.captains)\n    }\n}"
+      },
+      "Seth-Test - trips_query": {
+        "map": "function (doc) {\r\n  if (doc.type == 'wcgop-trip') { \r\n    var regNum = (doc.vessel.coastGuardNumber ? doc.vessel.coastGuardNumber : doc.vessel.stateRegulationNumber);\r\n    emit(doc.legacy.tripId, {departureDate: doc.departureDate, returnDate: doc.returnDate, captain: doc.captain, vesselName: doc.vessel.vesselName, vesselNum: regNum, observer: doc.observer, programName: doc.program.name, fishery: doc.fishery.description, fishTickets: doc.fishTickets});\r\n  }\r\n}"
+      },
+      "Seth-Test - observer_returndate": {
+        "map": "function (doc) {\n  if (doc.type === \"wcgop-trip\") {\n    emit([doc.observer, doc.returnDate], 1);\n  }\n}"
+      },
+      "Seth-Test - observer_tripstatus": {
+        "map": "function (doc) {\n  if (doc.type === \"wcgop-trip\") {\n    emit([doc.observer, doc.tripStatus.description], 1);\n  }\n}"
+      },
+      "Seth-Test - sea_days": {
+        "map": "function (doc) {\r\n    if (doc.type == 'wcgop-trip' && doc.returnDate) {\r\n\r\n        var regNum = (doc.vessel.coastGuardNumber ? doc.vessel.coastGuardNumber : doc.vessel.stateRegulationNumber);\r\n\r\n        // var seaDays =\r\n        //     (\r\n        //         (\r\n        //             Date.parse(doc.returnDate).getTime() - Date.parse(doc.departureDate).getTime()\r\n        //         ) / (\r\n        //             1000 * 3600 * 24\r\n        //         )\r\n        //     ) + 1;\r\n        \r\n        emit([doc.program.name, doc.fishery.description, doc.returnDate, regNum], 1)\r\n    }\r\n}"
+      },
+      "Obs-Web - all_person_alias": {
+        "map": "function (doc) {\n  if (doc.type === 'person-alias') {\n    emit(doc.userName, 1);\n  } \n}"
+      },
+      "Obs-Web - vessel_permissions": {
+        "map": "function (doc) {\n  if (doc.type === 'vessel-permissions') {\n    emit(doc._id, 1);\n  }\n}"
+      },
+      "boatnet-config-lookup": {
+        "map": "function (doc) {\n  if (doc.type === \"boatnet-config\") {\n    emit(doc.survey, doc._id);\n  }\n}"
+      },
+      "model_definition": {
+        "map": "function (doc) {\n  if (doc.type === 'model-definition') {\n    emit(doc.modelName, 1);\n  }\n}"
+      },
+      "ashop-doc-types": {
+        "map": "function (doc) {\n  if (doc.type.indexOf('ashop') > -1 && doc.type.indexOf('haul') === -1 && doc.type.indexOf('cruise') === -1) {\n    emit(doc.type, 1);\n  }\n}"
+      },
+      "missing-doc-types": {
+        "map": "function (doc) {\n  if (doc.type === 'non-fishing-day-reason-code' || \n      doc.type === 'non-flow-scale-reason' ||\n      doc.type === 'species-category' ||\n      doc.type === 'tribal-delivery-reason-code' ||\n      doc.type === 'viability' ||\n      doc.type === 'waiver-reason') {\n    emit(doc.type, 1);\n  }\n}"
+      }
+    }
+  }

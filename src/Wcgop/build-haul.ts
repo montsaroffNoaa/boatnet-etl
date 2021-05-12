@@ -1,10 +1,10 @@
-import { WcgopCatch, WcgopOperation, WcgopOperationTypeName, GearPerformance, GearType, WeightMethod } from "../../../boatnet/libs/bn-models";
+
 import { dictAllHauls, dictWeightMethod, dictGearPerformance, dictGearType } from "./wcgop-etl";
-import { FishingLocation } from "../../../boatnet/libs/bn-models/models/_common/fishing-location";
 import { GetDocFromDict } from "../Common/common-functions";
 import moment = require("moment");
 import { UploadedBy, UploadedDate } from "../Common/common-variables";
 import { BuildFishingLocations } from "./build-fishing-locations";
+import { WcgopCatch, FishingLocation, WcgopOperation, WcgopOperationTypeName, GearPerformance, GearType, WeightMethod } from "@boatnet/bn-models/lib";
 
 export async function BuildHaul(odb: any, iHaulID: number, lstCatches: WcgopCatch[]) {
     if (iHaulID != undefined) {
@@ -21,7 +21,7 @@ export async function BuildHaul(odb: any, iHaulID: number, lstCatches: WcgopCatc
 
         let lstFishingLocations: FishingLocation[] = await BuildFishingLocations(odb, iHaulID);
 
-        let WeightMethod = await GetDocFromDict(dictWeightMethod, lstHaulData[4], 'weight-method-lookup', 'LookupDocs')
+        let WeightMethod = await GetDocFromDict(dictWeightMethod, lstHaulData[4], 'weight-method-lookup', 'wcgop')
         if (WeightMethod != null) {
             WeightMethod = {
                 description: WeightMethod.description,
@@ -29,7 +29,7 @@ export async function BuildHaul(odb: any, iHaulID: number, lstCatches: WcgopCatc
             }
         }
 
-        let GearPerformance = await GetDocFromDict(dictGearPerformance, lstHaulData[7], 'gear-performance-lookup', 'LookupDocs')
+        let GearPerformance = await GetDocFromDict(dictGearPerformance, lstHaulData[7], 'gear-performance-lookup', 'wcgop')
         if (GearPerformance != null) {
             GearPerformance = {
                 description: GearPerformance.description,
@@ -37,7 +37,7 @@ export async function BuildHaul(odb: any, iHaulID: number, lstCatches: WcgopCatc
             }
         }
 
-        let GearType = await GetDocFromDict(dictGearType, lstHaulData[6], 'gear-type-lookup', 'LookupDocs')
+        let GearType = await GetDocFromDict(dictGearType, lstHaulData[6], 'gear-type-lookup', 'wcgop')
         if (GearType != null) {
             GearType = {
                 description: GearType.description,

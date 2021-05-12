@@ -1,9 +1,10 @@
-import { SightingEvent, InteractionEvent, Behavior, InteractionType, Beaufort, Measurement, SightingEventTypeName, InteractionOutcome, InteractionEventTypeName, Confidence, SightingCondition, BodyLength } from "../../../boatnet/libs/bn-models";
-import { dictAllSpeciesSightings, dictConfidence, dictBodyLength, dictSightingCondition, dictBeaufort, dictInteractionOutcome, dictInteractionBehaviors, dictAllSpeciesInteractions, dictFishingInteraction, FetchRevID } from "./wcgop-etl";
+import { dictAllSpeciesSightings, dictConfidence, dictBodyLength, dictSightingCondition, dictBeaufort, dictInteractionOutcome, dictInteractionBehaviors, dictAllSpeciesInteractions, dictFishingInteraction, FetchRevID, dictTaxonomyAliases } from "./wcgop-etl";
 import { GetDocFromDict, GenerateCouchID } from "../Common/common-functions";
 import { Point } from "geojson";
 import moment = require("moment");
 import { UploadedBy, UploadedDate } from "../Common/common-variables";
+import { SightingEvent, InteractionEvent, TaxonomyAlias, Behavior, InteractionType, Beaufort, Measurement, SightingEventTypeName, InteractionOutcome, InteractionEventTypeName,
+            BodyLength, Confidence, SightingCondition,  } from "@boatnet/bn-models/lib";
 
 export async function BuildMmsbt(iTripID: number): Promise<[SightingEvent[], InteractionEvent[]]> {
     try {
@@ -18,43 +19,40 @@ export async function BuildMmsbt(iTripID: number): Promise<[SightingEvent[], Int
                 let SpeciesSightingID = SpeciesSightingData[i][0];
                 let MmsbtItem: InteractionEvent | SightingEvent;
 
-                let Species = await GetDocFromDict(dictSpecies, SpeciesSightingData[i][2], 'all-species', 'MainDocs');
-                if (Species != null) {
-                    Species = {
-                        scientificName: Species.scientificName,
-                        commonName: Species.commonName,
-                        _id: Species._id
-                    }
+                let taxonomyAlias: TaxonomyAlias = await GetDocFromDict(dictTaxonomyAliases, SpeciesSightingData[i][2], 'taxonomy-alias-by-wcgop-id', 'taxonomy-views');
+                if (taxonomyAlias == null) {
+                    console.log('error, wcgop species not in taxonomy, id = ' + SpeciesSightingData[i][2]);
                 }
-                let Confidence = await GetDocFromDict(dictConfidence, SpeciesSightingData[i][11], 'confidence-lookup', 'LookupDocs');
+                
+                let Confidence = await GetDocFromDict(dictConfidence, SpeciesSightingData[i][11], 'confidence-lookup', 'wcgop');
                 if (Confidence != null) {
                     Confidence = {
                         description: Confidence.description,
                         _id: Confidence._id
                     }
                 }
-                let BodyLength = await GetDocFromDict(dictBodyLength, SpeciesSightingData[i][12], 'body-length-lookup', 'LookupDocs')
+                let BodyLength = await GetDocFromDict(dictBodyLength, SpeciesSightingData[i][12], 'body-length-lookup', 'wcgop')
                 if (BodyLength != null) {
                     BodyLength = {
                         description: BodyLength.description,
                         _id: BodyLength._id
                     }
                 }
-                let SightingCondition = await GetDocFromDict(dictSightingCondition, SpeciesSightingData[i][13], 'sighting-condition-lookup', 'LookupDocs');
+                let SightingCondition = await GetDocFromDict(dictSightingCondition, SpeciesSightingData[i][13], 'sighting-condition-lookup', 'wcgop');
                 if (SightingCondition != null) {
                     SightingCondition = {
                         description: SightingCondition.description,
                         _id: SightingCondition._id
                     }
                 }
-                let BeaufortValue = await GetDocFromDict(dictBeaufort, SpeciesSightingData[i][13], 'beaufort-lookup', 'LookupDocs');
+                let BeaufortValue = await GetDocFromDict(dictBeaufort, SpeciesSightingData[i][13], 'beaufort-lookup', 'wcgop');
                 if (BeaufortValue != null) {
                     BeaufortValue = {
                         description: BeaufortValue.description,
                         _id: BeaufortValue._id
                     }
                 }
-                let Outcome = await GetDocFromDict(dictInteractionOutcome, SpeciesSightingData[i][27], 'interaction-outcome-lookup', 'LookupDocs')
+                let Outcome = await GetDocFromDict(dictInteractionOutcome, SpeciesSightingData[i][27], 'interaction-outcome-lookup', 'wcgop')
                 if (Outcome != null) {
                     Outcome = {
                         description: Outcome.description,
@@ -78,7 +76,7 @@ export async function BuildMmsbt(iTripID: number): Promise<[SightingEvent[], Int
                 }
                 let Behaviors: Behavior[] = [];
                 for (let BehaveNum = 0; BehaveNum < BehaviorIDs.length; BehaveNum++) {
-                    let docBehavior = await GetDocFromDict(dictInteractionBehaviors, BehaviorIDs[BehaveNum], 'behavior-type-lookup', 'LookupDocs');
+                    let docBehavior = await GetDocFromDict(dictInteractionBehaviors, BehaviorIDs[BehaveNum], 'behavior-type-lookup', 'wcgop');
                     if (docBehavior != null) {
                         docBehavior = {
                             description: docBehavior.description,
@@ -96,10 +94,10 @@ export async function BuildMmsbt(iTripID: number): Promise<[SightingEvent[], Int
                     for (let j = 0; j < InteractionData.length; j++) {
                         // if record has interaction type 101 (sighting only), it will be the only record in InteractionData, else get list of interaction types
                         if (InteractionData[j][2] == 101) {
-                            MmsbtItem = await ConstructSightingEvent(SpeciesSightingData[i], Behaviors, Confidence, BodyLength, SightingCondition, BeaufortValue, Species, lstHaulCouchIDs);
+                            MmsbtItem = await ConstructSightingEvent(SpeciesSightingData[i], Behaviors, Confidence, BodyLength, SightingCondition, BeaufortValue, taxonomyAlias, lstHaulCouchIDs);
                             lstSightingEvents.push(MmsbtItem);
                         } else {
-                            let FishingInteraction = await GetDocFromDict(dictFishingInteraction, InteractionData[j][2], 'interaction-type-lookup', 'LookupDocs');
+                            let FishingInteraction = await GetDocFromDict(dictFishingInteraction, InteractionData[j][2], 'interaction-type-lookup', 'wcgop');
                             if (FishingInteraction != null) {
                                 FishingInteraction = {
                                     description: FishingInteraction.description,
@@ -109,10 +107,10 @@ export async function BuildMmsbt(iTripID: number): Promise<[SightingEvent[], Int
                             lstInteractionTypes.push(FishingInteraction);
                         }
                     }
-                    let Interaction = await ConstructInteractionEvent(lstInteractionTypes, SpeciesSightingData[i], Behaviors, Confidence, BodyLength, SightingCondition, BeaufortValue, Species, lstHaulCouchIDs, Outcome);
+                    let Interaction = await ConstructInteractionEvent(lstInteractionTypes, SpeciesSightingData[i], Behaviors, Confidence, BodyLength, SightingCondition, BeaufortValue, taxonomyAlias, lstHaulCouchIDs, Outcome);
                     lstInteractionEvents.push(Interaction);
                 } else {
-                    let Sighting = await ConstructSightingEvent(SpeciesSightingData[i], Behaviors, Confidence, BodyLength, SightingCondition, BeaufortValue, Species, lstHaulCouchIDs);
+                    let Sighting = await ConstructSightingEvent(SpeciesSightingData[i], Behaviors, Confidence, BodyLength, SightingCondition, BeaufortValue, taxonomyAlias, lstHaulCouchIDs);
                     lstSightingEvents.push(Sighting)
                 }
             }
@@ -135,7 +133,7 @@ export async function BuildMmsbt(iTripID: number): Promise<[SightingEvent[], Int
 
 }
 
-async function ConstructSightingEvent(SightingData: any, AnimalBehaviors: Behavior[], Confidence: Confidence, BodyLength: BodyLength, SightingCondition: SightingCondition, BeaufortValue: Beaufort, Species: Species, lstHaulCouchIDs: string[]) {
+async function ConstructSightingEvent(SightingData: any, AnimalBehaviors: Behavior[], Confidence: Confidence, BodyLength: BodyLength, SightingCondition: SightingCondition, BeaufortValue: Beaufort, taxonomyAlias: TaxonomyAlias, lstHaulCouchIDs: string[]) {
     let CouchID = await GenerateCouchID();
     let SightingLocation: Point = {
         type: "Point",
@@ -191,7 +189,7 @@ async function ConstructSightingEvent(SightingData: any, AnimalBehaviors: Behavi
         dataSource: SightingData[26],
 
         operationIDs: lstHaulCouchIDs,
-        species: Species,
+        species: taxonomyAlias,
         confidentOfSpecies: Confidence,
         sightingDate: moment(SightingData[3], moment.ISO_8601).format(),
         location: SightingLocation,
@@ -215,7 +213,7 @@ async function ConstructSightingEvent(SightingData: any, AnimalBehaviors: Behavi
     return NewSighting;
 }
 
-async function ConstructInteractionEvent(Interactions: InteractionType[], SightingData: any, AnimalBehaviors: Behavior[], Confidence: Confidence, BodyLength: BodyLength, SightingCondition: SightingCondition, BeaufortValue: Beaufort, Species: Species, lstHaulCouchIDs: string[], Outcome: InteractionOutcome) {
+async function ConstructInteractionEvent(Interactions: InteractionType[], SightingData: any, AnimalBehaviors: Behavior[], Confidence: Confidence, BodyLength: BodyLength, SightingCondition: SightingCondition, BeaufortValue: Beaufort, taxonomyAlias: TaxonomyAlias, lstHaulCouchIDs: string[], Outcome: InteractionOutcome) {
 
     let CouchID = await GenerateCouchID();
     let SightingLocation: Point = {
@@ -272,7 +270,7 @@ async function ConstructInteractionEvent(Interactions: InteractionType[], Sighti
         dataSource: SightingData[26],
 
         operations: lstHaulCouchIDs,
-        species: Species,
+        species: taxonomyAlias,
         confidenceOfSpecies: Confidence,
         date: moment(SightingData[3], moment.ISO_8601).format(),
         location: SightingLocation,

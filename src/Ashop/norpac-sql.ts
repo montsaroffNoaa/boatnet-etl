@@ -343,6 +343,10 @@ export function strHaulSQL(iCruiseID: number, iHaulID: number, strPermit: string
 
     return `
     SELECT 
+        
+    
+    
+        
         CRUISE,
         HAUL_SEQ,
         HAUL_NUMBER,
