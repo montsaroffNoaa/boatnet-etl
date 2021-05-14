@@ -27,9 +27,9 @@ Install the npm packages listed. Some of those are currently unused, and need to
 
 **Current Status:**
 
-Build failures at the moment due to boatnet-module changes over time. The wcgop-script should be functional as it stands. The ashop-etl script is broken at the moment for unknown reason, and is currently being fixed. 
+Currently should build correctly. The wcgop-script should be functional as it stands. The ashop-etl script is broken at the moment for unknown reason, and is currently being fixed. 
 
-Some npm packages are out of date and need to be updated, which will probably as usual break everything and need fixing, on the back burner.
+Some npm packages are out of date and need to be updated, which will probably as usual break everything and need fixing, on the back burner. For the time being npm should auto install only the specified versions
 
 A specific branch of boatnet-module needs to be created to keep this repo stable. 
 

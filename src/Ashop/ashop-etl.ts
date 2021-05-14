@@ -355,7 +355,7 @@ async function InitializeAshopETL() {
 
 }
 
-InitializeAshopETL();
+//InitializeAshopETL();
 
 // CreateMasterViews();
 

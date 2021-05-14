@@ -1,12 +1,11 @@
 import moment = require("moment");
 import { Certificate } from "@boatnet/bn-models/lib";
 import { dictAllTripCertificates } from "./wcgop-etl";
+import { ConvertToMomentIso8601 } from "../Common/common-functions";
 
 export async function BuildTripCertificate(tripId: number) {
-    if (tripId != undefined) {
+    if (tripId) {
         try {
-            
-        } catch (error) {
             
         // let tripCertificateData = await ExecuteOracleSQL(odb, strTripCertificateSQL + tripId);
         let tripCertifiates: any[] = dictAllTripCertificates[tripId];
@@ -19,7 +18,6 @@ export async function BuildTripCertificate(tripId: number) {
 
         for(let i = 0; i < tripCertifiates.length; i++){
             let tripCertificateData: any[] = tripCertifiates[i];
-            tripCertificateData = tripCertificateData[0];
             let userCreatedByID = tripCertificateData[4];
             let userModifiedByID = tripCertificateData[6];
     
@@ -28,22 +26,24 @@ export async function BuildTripCertificate(tripId: number) {
     
             let newTripCertificate: Certificate = {
                 certificateNumber: tripCertificateData[2],
-                createdDate: moment(tripCertificateData[3], moment.ISO_8601).format(),
-                createdBy: recordCreatedBy,
-                updatedDate: moment(tripCertificateData[9], moment.ISO_8601).format(),
-                updatedBy: recordModifiedBy,
                 certificationId: tripCertificateData[7],
+                createdDate: ConvertToMomentIso8601(tripCertificateData[3]),
+                createdBy: recordCreatedBy,
+                updatedDate: ConvertToMomentIso8601(tripCertificateData[9]),
+                updatedBy: recordModifiedBy,
                 dataSource: tripCertificateData[10],
                 legacy: {
                     tripCertificateId: tripCertificateData[0],
                     tripId: tripCertificateData[1],
-                    obsprodLoadDate: moment(tripCertificateData[8], moment.ISO_8601).format()
+                    obsprodLoadDate: ConvertToMomentIso8601(tripCertificateData[8]),
                 }
             }
             tripCertificateDocs.push(newTripCertificate)
             
         }
         return tripCertificateDocs;
+        } catch (error) {
+            console.log(error)
         }
     } else {
         return null;
