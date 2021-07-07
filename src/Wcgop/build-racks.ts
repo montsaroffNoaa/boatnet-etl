@@ -10,6 +10,8 @@ async function BuildRacks() {
     let racks: Rack[] = [];
 
     let locations: any[] = [];
+    let species: any[] = [];
+    let dissections: any[] = [];
 
     await couchConnection.view('obs_web', 'wcgop-lookups', {
         'key': 'bs-location',
@@ -18,20 +20,51 @@ async function BuildRacks() {
         locations = data.rows;
     });
 
+    await couchConnection.view('Taxonomy', 'taxonomy-alias-by-wcgop-id', {
+        'include_docs': true
+    }).then((data: any) => {
+        species = data.rows;
+    });
+
+    await couchConnection.view('obs_web', 'wcgop-lookups', {
+        key: 'biostructure-type',
+        'include_docs': true
+    }).then((data: any) => {
+        dissections = data.rows;
+    })
+
     for (let i = 0; i < oracleRacks.length; i++) {
         const currRack = oracleRacks[i];
 
         let createdBy = await GetDocFromDict(dictObservers, currRack[7], 'observers-by-userid', 'wcgop');
         let modifiedBy = await GetDocFromDict(dictObservers, currRack[9], 'observers-by-userid', 'wcgop');
         const loc: any = filter(locations, { value: currRack[3] });
+        let spec: any = filter(species, { key: currRack[4]});
+        const dissection: any = filter(dissections, { value: currRack[2] });
+
+        let specInfo: any = {};
+        let dissect: any = {};
+
+        if (spec[0]) {
+            specInfo = {
+                _id: get(spec[0], 'doc._id'),
+                commonNames: get(spec[0], 'doc.commonNames'),
+                wcgopSpeciesId: get(spec[0], 'doc.taxonomy.legacy.wcgopSpeciesId')
+            }
+        }
+        dissect = {
+            _id: get(dissection[0], 'doc._id'),
+            description: get(dissection[0], 'doc.description'),
+            lookupVal: get(dissection[0], 'doc.lookupValue'),
+        }
 
         const newRack: Rack = {
             type: RackType,
             rackId: currRack[0],
             rackName: currRack[1],
-            dissectionType: currRack[2],
+            dissectionType: dissect,
             rackLocation: loc[0].doc,
-            speciesId: currRack[4],
+            speciesId: spec[0] ? specInfo : currRack[4],
             rackColumns: currRack[5],
             rackRows: currRack[6],
             createdDate: currRack[8],
